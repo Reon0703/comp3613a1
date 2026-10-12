@@ -4,7 +4,7 @@
 <style>
     body {
         overflow-x: hidden;
-        background: #f4f6f8;
+        background: var(--brand-page-gradient);
     }
 
     #wrapper {
@@ -50,11 +50,11 @@
         transition: all 0.3s;
         display: flex;
         flex-direction: column;
-        background-color: #f4f6f8;
+        background: var(--brand-page-gradient);
     }
 
     .navbar {
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid var(--bs-border-color);
     }
 </style>
 {% block additional_styles %}{% endblock %}
@@ -62,8 +62,8 @@
 
 {% block content %}
 <div id="wrapper">
-    <nav id="sidebar" class="p-3 d-flex flex-column vh-100">
-        <div class="brand-wordmark">FastStarter</div>
+    <nav id="sidebar" class="p-3 d-flex flex-column vh-100 collapsed">
+        <div class="brand-wordmark">Internship Platform</div>
 
         <ul class="nav nav-pills flex-column gap-2 flex-grow-1">
             <li class="nav-item">
@@ -73,6 +73,45 @@
                     Home
                 </a>
             </li>
+            {% if user.is_company %}
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/company/vacancies') }}"
+                   href="{{ url_for('company_vacancies_view') }}">
+                    <span class="material-symbols-outlined me-2">work</span>
+                    Vacancies
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/company/profile') }}"
+                   href="{{ url_for('company_profile_view') }}">
+                    <span class="material-symbols-outlined me-2">business</span>
+                    Profile
+                </a>
+            </li>
+            {% endif %}
+            {% if user.is_student %}
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/internships') }}"
+                   href="{{ url_for('browse_internships') }}">
+                    <span class="material-symbols-outlined me-2">search</span>
+                    Browse internships
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/student/profile') }}"
+                   href="{{ url_for('student_profile_view') }}">
+                    <span class="material-symbols-outlined me-2">person</span>
+                    Profile
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/student/applications') }}"
+                   href="{{ url_for('student_applications_view') }}">
+                    <span class="material-symbols-outlined me-2">assignment</span>
+                    My applications
+                </a>
+            </li>
+            {% endif %}
             <li class="nav-item mt-auto">
                 <a class="nav-link d-flex align-items-center text-danger" href="{{ url_for('logout') }}">
                     <span class="material-symbols-outlined me-2">logout</span>
@@ -84,7 +123,7 @@
 
     <div id="content">
         <nav class="navbar navbar-expand-lg bg-white mb-4 px-3 rounded-3 shadow-sm">
-            <button class="btn btn-outline-secondary" id="menu-toggle" type="button">
+            <button class="btn btn-outline-secondary" id="menu-toggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
                 <span class="material-symbols-outlined md-dark">menu</span>
             </button>
             <div class="ms-auto d-flex align-items-center gap-3">
@@ -105,8 +144,34 @@
 </div>
 
 <script>
-    document.getElementById("menu-toggle").addEventListener("click", function () {
-        document.getElementById("sidebar").classList.toggle("collapsed");
+    const sidebar = document.getElementById("sidebar");
+    const menuToggle = document.getElementById("menu-toggle");
+    const menuIcon = menuToggle.querySelector(".material-symbols-outlined");
+    const sidebarPreferenceKey = "internship-platform-sidebar-expanded";
+
+    function setSidebarExpanded(expanded) {
+        sidebar.classList.toggle("collapsed", !expanded);
+        menuToggle.setAttribute("aria-expanded", String(expanded));
+        menuToggle.setAttribute("aria-label", expanded ? "Close navigation" : "Open navigation");
+        menuIcon.textContent = expanded ? "menu_open" : "menu";
+    }
+
+    let sidebarExpanded = false;
+    try {
+        sidebarExpanded = localStorage.getItem(sidebarPreferenceKey) === "true";
+    } catch (error) {
+        sidebarExpanded = false;
+    }
+    setSidebarExpanded(sidebarExpanded);
+
+    menuToggle.addEventListener("click", function () {
+        sidebarExpanded = sidebar.classList.contains("collapsed");
+        setSidebarExpanded(sidebarExpanded);
+        try {
+            localStorage.setItem(sidebarPreferenceKey, String(sidebarExpanded));
+        } catch (error) {
+            // Keep the toggle functional when browser storage is unavailable.
+        }
     });
 </script>
 {% block subpage_scripts %}{% endblock %}

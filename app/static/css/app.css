@@ -1,17 +1,58 @@
 :root {
-  /* Phase 5 theming: Guide overwrites these from docs/report.md preferences */
-  --brand-name: "FastStarter";
-  --brand-bg: #0c1218;
-  --brand-surface: #f7f4ef;
-  --brand-ink: #14202b;
-  --brand-muted: #6a7a88;
-  --brand-accent: #c45c26;
-  --brand-accent-2: #2a6f6b;
-  --brand-sidebar: #14202b;
-  --brand-sidebar-text: #a8b4bf;
+  /* Phase 5 theming: Internship Platform brand */
+  --brand-name: "Internship Platform";
+  --brand-bg-start: #94B0B7;
+  --brand-bg-end: #C2C8C5;
+  --brand-page-gradient: linear-gradient(
+    135deg,
+    var(--brand-bg-start) 0%,
+    65%,
+    var(--brand-bg-end) 100%
+  );
+  --brand-surface: #f8faf9;
+  --brand-page-bg: #edf2f1;
+  --brand-ink: #0F1A1F;
+  --brand-ink-strong: #1B2A31;
+  --brand-ink-accent: #12333F;
+  --brand-muted: #51656d;
+  --brand-accent: #12333F;
+  --brand-accent-2: #4a707b;
+  --brand-sidebar: #1B2A31;
+  --brand-sidebar-text: #e7f0f3;
   --brand-font-display: "Fraunces", Georgia, serif;
-  --brand-font-body: "Source Sans 3", "Segoe UI", sans-serif;
-  --brand-radius: 0.85rem;
+  --brand-font-body: "Source Sans 3", sans-serif;
+  --brand-radius: 1rem;
+
+  --bs-body-font-family: var(--brand-font-body);
+  --bs-body-color: var(--brand-ink);
+  --bs-body-color-rgb: 15, 26, 31;
+  --bs-body-bg: var(--brand-surface);
+  --bs-body-bg-rgb: 248, 250, 249;
+  --bs-emphasis-color: var(--brand-ink-strong);
+  --bs-secondary-color: var(--brand-muted);
+  --bs-secondary-color-rgb: 81, 101, 109;
+  --bs-tertiary-color: #71828a;
+  --bs-tertiary-bg: #edf2f1;
+  --bs-primary: var(--brand-accent);
+  --bs-primary-rgb: 18, 51, 63;
+  --bs-primary-text-emphasis: #12333f;
+  --bs-primary-bg-subtle: #dce8e9;
+  --bs-secondary: var(--brand-accent-2);
+  --bs-secondary-rgb: 74, 112, 123;
+  --bs-link-color: var(--brand-accent);
+  --bs-link-color-rgb: 18, 51, 63;
+  --bs-link-hover-color: #315d69;
+  --bs-link-hover-color-rgb: 49, 93, 105;
+  --bs-border-color: rgba(18, 51, 63, 0.16);
+  --bs-border-color-translucent: rgba(18, 51, 63, 0.12);
+  --bs-success: #2f6b54;
+  --bs-success-rgb: 47, 107, 84;
+  --bs-danger: #a54044;
+  --bs-danger-rgb: 165, 64, 68;
+  --bs-warning: #916526;
+  --bs-warning-rgb: 145, 101, 38;
+  --bs-info: #467a87;
+  --bs-info-rgb: 70, 122, 135;
 }
 
 *,
@@ -24,12 +65,135 @@ body {
   margin: 0;
   font-family: var(--brand-font-body);
   color: var(--brand-ink);
-  background: var(--brand-bg);
+  background: var(--brand-page-gradient);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--brand-ink-strong);
+  font-family: var(--brand-font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.text-muted {
+  color: var(--brand-muted) !important;
+}
+
+.text-secondary {
+  color: #465b63 !important;
+}
+
+.btn-primary {
+  --bs-btn-color: #f8faf9;
+  --bs-btn-bg: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #214c59;
+  --bs-btn-hover-border-color: #214c59;
+  --bs-btn-active-bg: #0c2933;
+  --bs-btn-active-border-color: #0c2933;
+  --bs-btn-disabled-bg: #71858b;
+  --bs-btn-disabled-border-color: #71858b;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent-2);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-accent);
+  --bs-btn-hover-border-color: var(--brand-accent);
+  --bs-btn-active-bg: #0c2933;
+  --bs-btn-active-border-color: #0c2933;
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--brand-muted);
+  --bs-btn-border-color: #81959b;
+  --bs-btn-hover-color: var(--brand-ink-strong);
+  --bs-btn-hover-bg: #e2eaea;
+  --bs-btn-hover-border-color: #6f858c;
+}
+
+.form-control,
+.form-select {
+  color: var(--brand-ink);
+  background-color: var(--brand-surface);
+  border-color: rgba(18, 51, 63, 0.2);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--brand-accent-2);
+  box-shadow: 0 0 0 0.22rem rgba(74, 112, 123, 0.2);
+}
+
+.form-control::placeholder {
+  color: #71828a;
+  opacity: 1;
+}
+
+.form-check-input:checked {
+  background-color: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+
+.card,
+.modal-content,
+.dropdown-menu {
+  color: var(--brand-ink);
+  background-color: var(--brand-surface);
+  border-color: var(--bs-border-color-translucent);
+}
+
+.page-link {
+  color: var(--brand-accent);
+  border-color: var(--bs-border-color-translucent);
+}
+
+.page-link:hover {
+  color: #0c2933;
+  background-color: #e6eeee;
+  border-color: var(--bs-border-color);
+}
+
+.page-item.active .page-link {
+  color: #fff;
+  background-color: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+
+.alert-success {
+  --bs-alert-color: #24533f;
+  --bs-alert-bg: #e4f0e9;
+  --bs-alert-border-color: #bfd8ca;
+}
+
+.alert-danger {
+  --bs-alert-color: #83383b;
+  --bs-alert-bg: #f6e8e8;
+  --bs-alert-border-color: #e8c7c8;
+}
+
+.alert-warning {
+  --bs-alert-color: #76531f;
+  --bs-alert-bg: #f5efdf;
+  --bs-alert-border-color: #e7d8b4;
+}
+
+.alert-info {
+  --bs-alert-color: #365f69;
+  --bs-alert-bg: #e5f0f1;
+  --bs-alert-border-color: #c4dcdf;
 }
 
 .brand-wordmark {
   font-family: var(--brand-font-display);
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
@@ -38,12 +202,10 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  color: var(--brand-surface);
+  color: var(--brand-ink);
   background:
-    linear-gradient(160deg, rgba(12, 18, 24, 0.55), rgba(12, 18, 24, 0.82)),
-    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(42, 111, 107, 0.45), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(196, 92, 38, 0.28), transparent 50%),
-    linear-gradient(180deg, #1a2834 0%, #0c1218 100%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12)),
+    var(--brand-page-gradient);
   position: relative;
   overflow: hidden;
 }
@@ -79,7 +241,7 @@ body {
 
 .landing-nav .brand-wordmark {
   font-size: clamp(1.4rem, 2.5vw, 1.85rem);
-  color: var(--brand-surface);
+  color: var(--brand-ink-accent);
   text-decoration: none;
 }
 
@@ -100,24 +262,25 @@ body {
 .landing-kicker {
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: color-mix(in srgb, var(--brand-surface) 65%, var(--brand-accent-2));
+  letter-spacing: 0.12em;
+  color: var(--brand-ink-accent);
   margin: 0 0 1rem;
+  font-weight: 700;
 }
 
 .landing-hero .brand-wordmark {
-  font-size: clamp(3rem, 9vw, 5.5rem);
-  line-height: 0.95;
+  font-size: clamp(2.8rem, 7vw, 4.8rem);
+  line-height: 0.98;
   margin: 0 0 1.25rem;
-  color: var(--brand-surface);
+  color: var(--brand-ink);
 }
 
 .landing-lead {
-  font-size: clamp(1.05rem, 2.2vw, 1.25rem);
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--brand-surface) 78%, transparent);
+  font-size: clamp(1.05rem, 2.2vw, 1.2rem);
+  line-height: 1.6;
+  color: var(--brand-ink-strong);
   margin: 0 0 2rem;
-  max-width: 28rem;
+  max-width: 31rem;
 }
 
 .landing-cta {
@@ -144,30 +307,30 @@ body {
 
 .btn-landing-primary {
   background: var(--brand-accent);
-  color: #fff8f3;
+  color: #edf5f7;
 }
 
 .btn-landing-primary:hover {
-  background: color-mix(in srgb, var(--brand-accent) 85%, #000);
+  background: color-mix(in srgb, var(--brand-accent) 84%, white);
   color: #fff;
 }
 
 .btn-landing-ghost {
-  background: transparent;
-  color: var(--brand-surface);
-  border-color: color-mix(in srgb, var(--brand-surface) 45%, transparent);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--brand-ink-accent);
+  border-color: rgba(18, 51, 63, 0.18);
 }
 
 .btn-landing-ghost:hover {
-  border-color: var(--brand-surface);
-  background: color-mix(in srgb, var(--brand-surface) 8%, transparent);
-  color: var(--brand-surface);
+  border-color: rgba(18, 51, 63, 0.3);
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--brand-ink-accent);
 }
 
 .landing-foot {
   padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 1.75rem;
   font-size: 0.85rem;
-  color: color-mix(in srgb, var(--brand-surface) 45%, transparent);
+  color: rgba(15, 26, 31, 0.75);
 }
 
 .landing-orb {
@@ -220,22 +383,22 @@ body {
   justify-content: center;
   padding: 1.5rem;
   background:
-    radial-gradient(ellipse at top left, color-mix(in srgb, var(--brand-accent-2) 35%, transparent), transparent 55%),
-    radial-gradient(ellipse at bottom right, color-mix(in srgb, var(--brand-accent) 28%, transparent), transparent 50%),
-    var(--brand-bg);
+    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.4), transparent 42%),
+    var(--brand-page-gradient);
 }
 
 .auth-panel {
   width: min(420px, 100%);
-  background: var(--brand-surface);
+  background: rgba(248, 250, 249, 0.95);
   color: var(--brand-ink);
   border-radius: var(--brand-radius);
   padding: 2rem 1.75rem;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 18px 45px rgba(15, 26, 31, 0.15);
+  border: 1px solid rgba(18, 51, 63, 0.08);
 }
 
 .auth-panel .brand-wordmark {
-  font-size: 1.75rem;
+  font-size: 1.8rem;
   margin-bottom: 0.25rem;
   color: var(--brand-accent);
 }

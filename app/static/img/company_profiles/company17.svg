@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title desc">
+  <title id="title">Cobalt Financial Advisory profile image</title>
+  <desc id="desc">Branded company profile image for Cobalt Financial Advisory</desc>
+  <rect width="640" height="420" rx="36" fill="#12333F"/>
+  <circle cx="520" cy="88" r="142" fill="#C2C8C5" opacity="0.72"/>
+  <circle cx="104" cy="390" r="168" fill="#C2C8C5" opacity="0.2"/>
+  <path d="M0 300 C150 230 260 390 420 294 C510 240 578 250 640 272 L640 420 L0 420 Z" fill="#C2C8C5" opacity="0.2"/>
+  <text x="56" y="110" fill="#FFFFFF" font-family="Georgia, serif" font-size="26" opacity="0.82">Finance</text>
+  <text x="56" y="286" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="112" font-weight="700" letter-spacing="4">CF</text>
+</svg>

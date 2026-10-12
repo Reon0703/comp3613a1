@@ -1,0 +1,37 @@
+@startuml
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam actorBorderColor #1B365D
+skinparam actorFontColor #1E232D
+skinparam usecaseBackgroundColor #FFFFFF
+skinparam usecaseBorderColor #1B365D
+skinparam usecaseFontColor #1E232D
+skinparam rectangleBorderColor #1B365D
+skinparam rectangleBackgroundColor #F8FAFC
+skinparam arrowColor #1B365D
+
+actor "Company" as Company
+
+rectangle "Internship Platform" as SystemBoundary {
+  usecase "Create and Publish Internship Vacancy" as Create_and_Publish_Internship_Vacancy
+  usecase "Browse Internship Vacancies" as Browse_Internship_Vacancies
+  usecase "Screen & Review Applications" as Screen_Review_Applications
+  usecase "Submit Internship Application" as Submit_Internship_Application
+  usecase "Attach Documents" as Attach_Documents
+  usecase "Shortlist/Reject Applications" as Shortlist_Reject_Applications
+}
+
+actor "Student" as Student
+
+Company -[hidden]right- Create_and_Publish_Internship_Vacancy
+Browse_Internship_Vacancies -[hidden]right- Student
+
+Company -right-> Create_and_Publish_Internship_Vacancy
+Student -left-> Browse_Internship_Vacancies
+Company -right-> Screen_Review_Applications
+Submit_Internship_Application ..> Attach_Documents : <<include>>
+Submit_Internship_Application ..> Browse_Internship_Vacancies : <<extend>>
+Shortlist_Reject_Applications ..> Screen_Review_Applications : <<extend>>
+
+@enduml

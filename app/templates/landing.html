@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}FastStarter{% endblock %}
+{% block title %}Internship Platform{% endblock %}
 
 {% block content %}
 <div class="landing">
@@ -7,7 +7,7 @@
   <div class="landing-orb landing-orb-2" aria-hidden="true"></div>
 
   <header class="landing-nav">
-    <a class="brand-wordmark" href="{{ url_for('index_view') }}">FastStarter</a>
+    <a class="brand-wordmark" href="{{ url_for('index_view') }}">Internship Platform</a>
     <div class="landing-nav-actions">
       {% if user_logged_in %}
       <a class="btn-landing btn-landing-ghost" href="{{ app_home }}">Open app</a>
@@ -20,11 +20,10 @@
   </header>
 
   <main class="landing-hero">
-    <p class="landing-kicker">Coursework starter</p>
-    <h1 class="brand-wordmark">FastStarter</h1>
+    <p class="landing-kicker">Career connections</p>
+    <h1 class="brand-wordmark">Internship Platform</h1>
     <p class="landing-lead">
-      A placeholder landing page for your COMP 3613 app.
-      Phase 5 theming replaces these colors, type, and copy with your brand.
+      Discover internship opportunities, manage applications, and review candidates in one clear and professional workspace built for students and companies alike.
     </p>
     <div class="landing-cta">
       {% if user_logged_in %}
@@ -37,7 +36,7 @@
   </main>
 
   <footer class="landing-foot">
-    Demo logins after <code>python manage.py init</code>: bob / bobpass · admin / adminpass
+    Built for student access and company hiring workflows.
   </footer>
 </div>
 {% endblock %}

@@ -2,7 +2,7 @@ from sqlmodel import Session, select, func
 from app.models.user import UserBase, User
 from typing import Optional, Tuple
 from app.utilities.pagination import Pagination
-from app.schemas.user import UserUpdate
+from app.schemas.user import StudentProfileUpdate, UserProfileUpdate, UserUpdate
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,67 @@ class UserRepository:
 
     def get_by_id(self, user_id: int) -> Optional[User]:
         return self.db.get(User, user_id)
+
+    def set_profile_image(self, user: User, profile_image_url: str) -> User:
+        user.profile_image_url = profile_image_url
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def update_profile(
+        self,
+        user_id: int,
+        profile_data: UserProfileUpdate,
+        profile_image_url: str | None = None,
+    ) -> User:
+        user = self.db.get(User, user_id)
+        if not user:
+            raise Exception("Invalid user id given")
+
+        user.company_name = profile_data.company_name.strip()
+        user.email = profile_data.email
+        user.phone = profile_data.phone.strip()
+        user.location = profile_data.location.strip()
+        if profile_image_url:
+            user.profile_image_url = profile_image_url
+
+        try:
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception as exc:
+            logger.error("An error occurred while updating profile: %s", exc)
+            self.db.rollback()
+            raise
+
+    def update_student_profile(
+        self,
+        user_id: int,
+        profile_data: StudentProfileUpdate,
+        profile_image_url: str | None = None,
+    ) -> User:
+        user = self.db.get(User, user_id)
+        if not user:
+            raise Exception("Invalid user id given")
+
+        user.first_name = profile_data.first_name.strip()
+        user.last_name = profile_data.last_name.strip()
+        user.email = profile_data.email
+        user.education_level = profile_data.education_level.strip()
+        if profile_image_url:
+            user.profile_image_url = profile_image_url
+
+        try:
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception as exc:
+            logger.error("An error occurred while updating student profile: %s", exc)
+            self.db.rollback()
+            raise
 
     def get_all_users(self) -> list[User]:
         return self.db.exec(select(User)).all()

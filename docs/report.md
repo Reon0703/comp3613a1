@@ -6,38 +6,93 @@ Do not put your student ID in this file if you will commit it. The PDF cover add
 
 ## Assigned project
 
+Internship Platform
+
 ## Three workflows
 
-### 1.
+### 1. Create and Publish Internship Vacancy (Company)
 
-### 2.
+### 2. Browse Internship Vacancies (Student)
 
-### 3.
+### 3. Screen & Review Applications (Company)
 
 ## Use case diagram
 
 ![Use case diagram](diagrams/use-case.png)
 
+Use-case notes: Company starts creating and publishing vacancies and screening applications; Student starts browsing vacancies. Browsing is extended by submitting an application, and submitting an application includes attaching documents. Screening is extended by shortlisting or rejecting applications.
+
 ## Model diagram
 
-First draft. Update this section in Phase 5 when polish revises the model, and note what changed.
+Phase 3 model draft. Update this section in Phase 5 when polish revises the model, and note what changed.
 
 ```mermaid
 erDiagram
-  ENTITY ||--o{ OTHER : relates
+  COMPANY ||--o{ INTERNSHIP_VACANCY : publishes
+  STUDENT ||--o{ APPLICATION : submits
+  INTERNSHIP_VACANCY ||--o{ APPLICATION : receives
+  APPLICATION ||--o{ APPLICATION_DOCUMENT : has
+  DOCUMENT ||--o{ APPLICATION_DOCUMENT : links
+  INTERNSHIP_VACANCY ||--o{ VACANCY_DOCUMENT : has
+  DOCUMENT ||--o{ VACANCY_DOCUMENT : links
+
+  COMPANY {
+    int company_id PK
+    string name
+    string email
+    string phone_num
+    string location
+  }
+  STUDENT {
+    int student_id PK
+    string first_name
+    string last_name
+    string email
+  }
+  INTERNSHIP_VACANCY {
+    int vacancy_id PK
+    int company_id FK
+    string title
+    string description
+  }
+  APPLICATION {
+    int application_id PK
+    int vacancy_id FK
+    int student_id FK
+    string status
+    date submission_date
+  }
+  DOCUMENT {
+    int document_id PK
+    string name
+    string file_path
+    string type
+    int size
+  }
+  APPLICATION_DOCUMENT {
+    int application_id PK, FK
+    int document_id PK, FK
+  }
+  VACANCY_DOCUMENT {
+    int vacancy_id PK, FK
+    int document_id PK, FK
+  }
 ```
+
+Model notes: One Company publishes many Internship Vacancies, and each vacancy stores company_id. One Student submits many Applications, and each application stores student_id and vacancy_id. Applications and Documents are many-to-many through Application Document; Vacancies and Documents are many-to-many through Vacancy Document. Both bridge tables use composite primary keys made from their two foreign keys.
 
 ## Wireframes
 
-Embed each student-crafted wireframe here (Phase 4). Paths are relative to this file:
+### Internship Platform wireframe overview
 
-```markdown
-### Explore / Search Publications
+![Internship Platform wireframe overview](wireframes/soft_eng_II_wireframe_a1.png)
 
-![Explore / Search Publications](wireframes/explore.png)
-```
+Coverage notes:
+- Create and Publish Internship Vacancy (Company)
+- Browse Internship Vacancies / Submit Internship Application (Student)
+- Screen & Review Applications (Company)
 
-`python manage.py report` also embeds any PNG/JPG still missing from `docs/wireframes/`.
+The single wireframe covers all named workflows and shows the company-side vacancy management, student-side vacancy browsing and application flow, and company-side application screening flow.
 
 ## Theming
 
@@ -45,7 +100,95 @@ Branding preferences and how they were applied (landing / login / register).
 
 ## Implementation notes
 
-One named workflow at a time. Include verify notes and polish / model revisions (Phase 5). Do not treat the first build as final.
+Phase 5 implementation started with the first named workflow: Create and Publish Internship Vacancy.
+
+The project now includes an `InternshipVacancy` SQLModel, a `VacancyRepository`, a `VacancyService`, a company-side route and template, and a dashboard link that routes through the app’s starter authentication flow. The workflow accepts the vacancy title, description, location, and published state, stores the record against the authenticated user, and renders the company’s vacancy list in the same general UI theme.
+
+Verify notes:
+- `python manage.py init` creates the `internshipvacancy` table and seeds the demo accounts.
+- `python manage.py run` starts the app successfully on `http://0.0.0.0:5000`.
+- Logged in as `bob / bobpass` and confirmed the authenticated company vacancy page loads at `/company/vacancies`.
+- Submitted a vacancy form with the real app route and confirmed the listing rendered the created role text, including title and description.
+
+This marks the first working workflow slice; the next polish step is to extend the model and views for the student browsing and application flow.
+
+Polish update: the vacancy form now opens from a dedicated `Create vacancy` button in an accessible Bootstrap modal. The modal keeps the title, location, description, publish toggle, cancel action, and existing save endpoint together without taking space from the company vacancy list.
+
+The modal now also supports an optional vacancy image. The upload field sits to the right of the text form, previews the selected image immediately in the browser, validates JPG/PNG/WEBP files up to 5 MB on the service layer, stores generated filenames under `app/static/uploads/`, and displays the saved image on the vacancy card. Existing databases receive the new optional `image_url` column through the startup schema check.
+
+Seed/migration update: the CLI now creates 10 company users (`company01` through `company10`) and 4 published vacancies per company across Business, Science, Technology, Agriculture, Sports, Engineering, Energy, Creative, Health, and Logistics. The seed is idempotent: the first run created 10 users and 40 vacancies, and a repeat run created 0 duplicates. Company passwords follow the pattern `company01pass` through `company10pass`.
+
+Card layout update: each company receives a generated branded SVG profile image under `app/static/img/company_profiles/`. Vacancy cards now use a responsive four-column layout on wide screens and collapse for smaller screens. A vacancy's uploaded image is displayed first; when no vacancy image exists, the card displays the logged-in company's profile image. The `profile_image_url` user field is migrated automatically for existing databases.
+
+Profile workflow update: the authenticated sidebar now includes a Profile tab linking to `/company/profile`. Companies can edit their company name, email, phone, location, and profile image. The page provides a live image preview, validates the same supported image types and 5 MB limit as vacancy uploads, and saves changes through the user service and repository layers. Existing company records were migrated and backfilled with their seeded names, locations, and profile images.
+
+Vacancy editing update: each vacancy card now includes an Edit button that reuses the create-vacancy modal. Edit mode pre-fills the title, location, description, publish state, and current vacancy image; the company can replace the image or leave it unchanged. The update route verifies ownership through the vacancy service before persisting changes.
+
+Status update: the vacancy modal now uses a shared status dropdown in both create and edit modes with `Published`, `Closed`, and `Draft` options. The explicit status is persisted and migrated from the previous boolean publish field; only `Published` vacancies are returned by the public vacancy repository query.
+
+Workflow 2 browse slice implemented: the student browse route calls `InternshipService`, which calls `InternshipRepository` to return published vacancies with title, description, and location search plus pagination. The student browse page presents the opportunities in a responsive card grid, and the authenticated navigation exposes Browse internships only to student-role users. Application submission is the next slice and will enforce the existing one-application-per-vacancy constraint.
+
+Student seed/migration update: the CLI now creates 10 student accounts (`student01` through `student10`) with passwords following the `student01pass` pattern. Each student receives a remote generic avatar URL from `i.pravatar.cc`, three submitted applications against published vacancies, and one remote generic PDF document record sourced from the W3C dummy PDF test asset per application. The first migration created 30 applications and 30 documents; a repeat run created 0 duplicates.
+
+Application submission slice implemented: each student vacancy card now opens an Apply modal requiring one PDF document (up to 10 MB). The POST route delegates to `InternshipService`, which checks student role, confirms the vacancy is still Published, rejects an existing student/vacancy application, validates the PDF signature and size, then asks `ApplicationRepository` to atomically create the Application, Document, and ApplicationDocument bridge. The database unique constraint remains the final duplicate-application guard. Uploaded resumes are stored under `app/uploads/applications/`, outside public static serving. After redirect, submitted vacancies display an `Application submitted` state. No schema migration was required because the existing tables already represent applications and documents.
+
+Verification status: static diagnostics passed for the updated application repository, internship repository/service, route, and student browse template; the apply route is registered and the FastAPI app imports. The student should run `python manage.py run`, sign in as a student, apply to one Published listing with a PDF, confirm the card changes to `Application submitted`, then try that same vacancy again and confirm the duplicate warning. Also check a non-PDF and a file over 10 MB are rejected.
+
+Workflow 2 detail polish: each browse card now has a View details action leading to `/internships/{vacancy_id}`. The detail page shows the published vacancy description, company identity, and supplementary documents linked through `VacancyDocument`. Each document download route verifies the document belongs to that Published vacancy; HTTP(S) documents redirect to their source, while local files are served only from the application's approved upload directories. The page shows an explicit empty state when no supplementary files are attached. Diagnostics and route-registration checks passed; browser verification is pending student observation.
+
+Student profile update: the student sidebar now includes a Profile tab linking to `/student/profile`. Students can edit first name, last name, email, and education level/program, and replace their profile picture with a live preview. Profile edits use a student-specific schema, service validation, and repository update; uploaded avatars use the shared image validation and are stored separately from company profile uploads. Diagnostics passed and both student profile routes are registered. Browser verification is pending student observation.
+
+Education-level update: the student Profile field now represents current study stage or completed qualification, not program/major. Seeded values include `3rd Year Undergraduate`, `2nd Year Postgraduate`, and `Associate's Degree Graduate`. The idempotent seed command backfilled the 10 existing student accounts with these values without creating duplicate seed records.
+
+Student application tracking update: the student home page's View Applications panel now links to `/student/applications`, and the student sidebar includes a My applications tab. The page lists only the signed-in student's applications with vacancy/company, submission date, status, attached document names, pagination, and an empty state. Application data is fetched through the application service and repository. Diagnostics passed and the route is registered; browser verification is pending student observation.
+
+Theme polish: the shared stylesheet now maps Bootstrap body, text, link, primary/secondary, status, form, card, pagination, and alert colors to the Internship Platform tokens. Shared headings use Fraunces and body text uses Source Sans 3. Authenticated-page surfaces and the expired-session page now use brand colors instead of the previous gray/blue defaults; the dark `/config` admin console retains its separate utility styling.
+
+Background polish: public, authentication, authenticated, and expired-session pages now share the `#94B0B7` to `#C2C8C5` brand gradient, with the CSS color hint shifted to 65%.
+
+Applicants distribution fix: the demo seeder previously assigned every student the same first three globally sorted vacancies, leaving the other companies' Applicants pages empty. Seed assignments now rotate across three distinct company groups per student. Existing obsolete demo applications are identified by the seeder's dummy-PDF URL and replaced; real uploaded application documents are preserved. Migration results: 28 obsolete demo applications replaced, 2 retained, and 30 total applications distributed as 3 per seeded company. A repeat seed replaced or created 0 applications.
+
+Workflow 3 (Screen & Review Applications) started. Company reject / shortlist outcomes will live on `Application.status`.
+
+<!-- student-build:code-check
+workflow: Screen & Review Applications (Company)
+form: choice
+layer: model
+architecture_ok: yes
+implement_confidence: 0.82
+passed: yes
+note: Chose Application.status for Submitted / Shortlisted / Rejected
+-->
+
+<!-- student-build:code-check
+workflow: Screen & Review Applications (Company)
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.84
+passed: yes
+note: Filled Application screening statuses; added Under Review in addition to Submitted/Shortlisted/Rejected
+-->
+
+<!-- student-build:code-check
+workflow: Screen & Review Applications (Company)
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.86
+passed: yes
+note: Thin company applications GET constructs ApplicationService + ApplicationRepository; no SQL in the route. Glue passed vacancy_id into browse.
+-->
+
+Workflow 3 list/review slice implemented: company vacancy cards link to applicants for that vacancy; ApplicationService checks company ownership then lists or updates Application.status to Shortlisted or Rejected; review page shows attached documents plus Reject / Add to shortlist.
+
+Workflow 3 polish: the company Applicants page now filters by `Undergraduate`, `Postgraduate`, `Associate's`, or `Diploma` as well as applicant-name search. A selected category matches case-insensitively when it appears anywhere in the student's education-level text (for example, `3rd Year Undergraduate`). Both filters are preserved while paging; no schema migration is required. Browser verification is pending student observation.
+
+Company vacancy cards now show each vacancy's applicant total in a badge at the bottom-right of its image. Counts come from one grouped repository query per company and include applications across all statuses; no schema migration is required.
+
+Navigation polish: the shared authenticated sidenav now starts collapsed on first visit for both student and company pages. The menu toggle opens and closes it, persists that preference across page navigation in browser storage, and updates its accessible label and expanded state.
+
+Student application management polish: My applications now provides an Edit action to replace the attached PDF and a Delete Application action. Both routes enforce student ownership; editing preserves review status, and deletion removes the application/document links while retaining any document still shared elsewhere. Browser verification is pending student observation.
 
 ## Deployed app
 

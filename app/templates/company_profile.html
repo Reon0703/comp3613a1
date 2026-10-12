@@ -1,0 +1,146 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Company Profile{% endblock %}
+
+{% block additional_styles %}
+<style>
+  .profile-page {
+    max-width: 980px;
+  }
+
+  .profile-header,
+  .profile-form {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(18, 51, 63, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 12px 24px rgba(15, 26, 31, 0.06);
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.35rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .profile-avatar {
+    width: 104px;
+    height: 104px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    border-radius: 1rem;
+    background: var(--brand-bg-start);
+  }
+
+  .profile-form {
+    padding: 1.35rem;
+  }
+
+  .profile-form .form-label {
+    font-weight: 600;
+    color: var(--brand-ink-strong);
+  }
+
+  .profile-preview {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 0.85rem;
+    background: rgba(148, 176, 183, 0.15);
+  }
+
+  @media (max-width: 575px) {
+    .profile-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 profile-page">
+  <div class="profile-header">
+    {% if user.profile_image_url %}
+    <img class="profile-avatar" src="{{ user.profile_image_url }}" alt="{{ user.company_name or user.username }} profile image">
+    {% else %}
+    <div class="profile-avatar d-flex align-items-center justify-content-center text-white fs-2 fw-bold">{{ user.username[:2]|upper }}</div>
+    {% endif %}
+    <div>
+      <div class="text-uppercase small fw-semibold text-muted mb-1">Company profile</div>
+      <h1 class="h3 mb-2">Keep your company details current</h1>
+      <p class="text-muted mb-0">These details help students understand who is behind your internship opportunities.</p>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('company_profile_update') }}" class="profile-form" enctype="multipart/form-data">
+    <div class="row g-4">
+      <div class="col-md-8">
+        <div class="mb-3">
+          <label for="company-name" class="form-label">Company name</label>
+          <input id="company-name" name="company_name" class="form-control" value="{{ user.company_name or '' }}" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="company-email" class="form-label">Company email</label>
+          <input id="company-email" name="email" type="email" class="form-control" value="{{ user.email }}" required>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="company-phone" class="form-label">Phone</label>
+            <input id="company-phone" name="phone" class="form-control" value="{{ user.phone or '' }}" placeholder="(555) 555-5555">
+          </div>
+          <div class="col-sm-6">
+            <label for="company-location" class="form-label">Location</label>
+            <input id="company-location" name="location" class="form-control" value="{{ user.location or '' }}" placeholder="Toronto, ON">
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label for="profile-image" class="form-label">Profile image</label>
+        <input id="profile-image" name="profile_image" type="file" class="form-control" accept="image/jpeg,image/png,image/webp">
+        <div class="form-text mb-3">Optional JPG, PNG, or WEBP image, up to 5 MB.</div>
+        {% if user.profile_image_url %}
+        <img id="profile-preview" class="profile-preview" src="{{ user.profile_image_url }}" alt="Profile image preview">
+        {% else %}
+        <div id="profile-preview" class="profile-preview d-flex align-items-center justify-content-center text-muted">Preview</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-primary">Save profile</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block subpage_scripts %}
+<script>
+  const profileImageInput = document.getElementById("profile-image");
+  const profilePreview = document.getElementById("profile-preview");
+
+  profileImageInput.addEventListener("change", function () {
+    const selectedFile = this.files[0];
+    if (!selectedFile) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", function () {
+      if (profilePreview.tagName !== "IMG") {
+        const previewImage = document.createElement("img");
+        previewImage.id = "profile-preview";
+        previewImage.className = "profile-preview";
+        previewImage.alt = "Profile image preview";
+        profilePreview.replaceWith(previewImage);
+      }
+      document.getElementById("profile-preview").src = reader.result;
+    });
+    reader.readAsDataURL(selectedFile);
+  });
+</script>
+{% endblock %}

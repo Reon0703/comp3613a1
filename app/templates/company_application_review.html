@@ -1,0 +1,134 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Review applicant{% endblock %}
+
+{% block additional_styles %}
+<style>
+  .review-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .review-header,
+  .review-panel,
+  .document-list a,
+  .applicant-portrait {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(18, 51, 63, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 10px 22px rgba(15, 26, 31, 0.05);
+  }
+
+  .review-header {
+    padding: 1.25rem 1.35rem;
+  }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .review-panel {
+    padding: 1.25rem;
+  }
+
+  .document-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .document-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .document-list a:hover {
+    background: rgba(148, 176, 183, 0.18);
+  }
+
+  .applicant-portrait {
+    overflow: hidden;
+  }
+
+  .applicant-portrait img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+
+  .review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+
+  @media (max-width: 767px) {
+    .review-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block subpage_content %}
+{% set application = result.application %}
+{% set vacancy = result.vacancy %}
+{% set student = application.student %}
+<div class="container-fluid py-2 review-detail">
+  <div class="review-header">
+    <div class="text-uppercase small fw-semibold text-muted mb-1">Company workflow</div>
+    <h1 class="h3 mb-1">Applicants for {{ vacancy.title }}{% if student %} — {{ student.display_name }}{% endif %}</h1>
+    <p class="text-muted mb-0">
+      Status: <strong>{{ application.status }}</strong>
+      · Submitted {{ application.submission_date.strftime('%d %b %Y') if application.submission_date else '—' }}
+    </p>
+    <a class="small" href="{{ url_for('company_vacancy_applications_view', vacancy_id=vacancy.id) }}">Back to applicants</a>
+  </div>
+
+  <div class="review-grid">
+    <section class="review-panel">
+      <h2 class="h5 mb-3">Documents</h2>
+      {% if application.documents %}
+      <div class="document-list">
+        {% for link in application.documents %}
+        {% if link.document %}
+        <a href="{{ link.document.file_path }}" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined">description</span>
+          <span>{{ link.document.name }}</span>
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No documents were attached to this application.</p>
+      {% endif %}
+
+      <div class="review-actions">
+        <form method="post" action="{{ url_for('company_application_reject', vacancy_id=vacancy.id, application_id=application.id) }}">
+          <button type="submit" class="btn btn-outline-danger">Reject</button>
+        </form>
+        <form method="post" action="{{ url_for('company_application_shortlist', vacancy_id=vacancy.id, application_id=application.id) }}">
+          <button type="submit" class="btn btn-primary">Add to shortlist</button>
+        </form>
+      </div>
+    </section>
+
+    <aside class="applicant-portrait">
+      {% if student and student.profile_image_url %}
+      <img src="{{ student.profile_image_url }}" alt="Photo of {{ student.display_name }}">
+      {% else %}
+      <div class="p-5 text-center text-muted">No applicant photo</div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{
+  "system": "Internship Platform",
+  "actors": [
+    {"name": "Company", "side": "left"},
+    {"name": "Student", "side": "right"}
+  ],
+  "use_cases": [
+    {
+      "name": "Create and Publish Internship Vacancy",
+      "actors": ["Company"]
+    },
+    {
+      "name": "Browse Internship Vacancies",
+      "actors": ["Student"],
+      "extends": ["Submit Internship Application"]
+    },
+    {
+      "name": "Screen & Review Applications",
+      "actors": ["Company"],
+      "extends": ["Shortlist/Reject Applications"]
+    },
+    {
+      "name": "Submit Internship Application",
+      "includes": ["Attach Documents"]
+    },
+    {"name": "Attach Documents"},
+    {"name": "Shortlist/Reject Applications"}
+  ]
+}

@@ -129,6 +129,7 @@ def to_plantuml(spec: DiagramSpec) -> str:
     lines = [
         "@startuml",
         "!pragma layout smetana",
+        "left to right direction",
         "skinparam shadowing false",
         "skinparam actorBorderColor #1B365D",
         "skinparam actorFontColor #1E232D",
@@ -171,9 +172,9 @@ def to_plantuml(spec: DiagramSpec) -> str:
                 continue
             actor_alias = aliases[actor_key]
             if actor_side.get(actor_name) == "right":
-                lines.append(f"{uc_alias} <-- {actor_alias}")
+                    lines.append(f"{actor_alias} -left-> {uc_alias}")
             else:
-                lines.append(f"{actor_alias} --> {uc_alias}")
+                lines.append(f"{actor_alias} -right-> {uc_alias}")
         for included in case.includes:
             other = aliases.get(f"uc:{included}")
             if other:

@@ -14,6 +14,7 @@ From the project root (venv active, deps installed; ``.env`` optional — falls 
 from __future__ import annotations
 
 import argparse
+import random
 import sys
 from pathlib import Path
 
@@ -47,14 +48,27 @@ def cmd_init(args: argparse.Namespace) -> None:
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
-    """Insert demo users.
+    """Insert demo users, companies, vacancies, students, and applications.
 
     bob / bobpass       (regular_user)
     admin / adminpass   (admin)
+    company01 / company01pass through company10 / company10pass (company)
+    student01 / student01pass through student10 / student10pass (student)
     """
     from app.database import ensure_db_and_tables, get_cli_session
+    from app.repositories.application import ApplicationRepository
+    from app.models.vacancy import InternshipVacancy
     from app.repositories.user import UserRepository
-    from app.schemas.user import AdminCreate, RegularUserCreate
+    from app.repositories.vacancy import VacancyRepository
+    from app.schemas.user import (
+        AdminCreate,
+        CompanyCreate,
+        RegularUserCreate,
+        StudentCreate,
+        StudentProfileUpdate,
+        UserProfileUpdate,
+    )
+    from app.utilities.company_profiles import ensure_company_profile_image
     from app.utilities.security import encrypt_password
 
     _ensure_models_loaded()
@@ -65,29 +79,317 @@ def cmd_seed(args: argparse.Namespace) -> None:
         ("admin", "admin@example.com", "adminpass", "admin"),
     ]
 
+    company_seed = [
+        ("Northstar Business Group", "Business", "Toronto", [
+            "Business Operations Intern", "Market Research Intern",
+            "Finance Intern", "Human Resources Intern",
+        ]),
+        ("BlueRiver Science Labs", "Science", "Vancouver", [
+            "Laboratory Research Intern", "Environmental Science Intern",
+            "Data Science Intern", "Biology Research Intern",
+        ]),
+        ("Vertex Technology Co.", "Technology", "Montreal", [
+            "Software Engineering Intern", "Cybersecurity Intern",
+            "Cloud Infrastructure Intern", "Product Support Intern",
+        ]),
+        ("Harvest Field Cooperative", "Agriculture", "Saskatoon", [
+            "Agricultural Technology Intern", "Crop Research Intern",
+            "Farm Operations Intern", "Food Supply Intern",
+        ]),
+        ("Summit Sports Network", "Sports", "Calgary", [
+            "Sports Marketing Intern", "Athlete Development Intern",
+            "Sports Analytics Intern", "Event Operations Intern",
+        ]),
+        ("Ironwood Engineering", "Engineering", "Edmonton", [
+            "Mechanical Engineering Intern", "Civil Engineering Intern",
+            "Electrical Engineering Intern", "Manufacturing Intern",
+        ]),
+        ("Cedar Green Energy", "Energy", "Halifax", [
+            "Renewable Energy Intern", "Power Systems Intern",
+            "Sustainability Intern", "Energy Policy Intern",
+        ]),
+        ("Brightline Creative Studio", "Creative", "Ottawa", [
+            "Graphic Design Intern", "Content Strategy Intern",
+            "User Experience Intern", "Digital Production Intern",
+        ]),
+        ("Harbor Health Partners", "Health", "Victoria", [
+            "Public Health Intern", "Healthcare Administration Intern",
+            "Clinical Research Intern", "Health Communications Intern",
+        ]),
+        ("Pioneer Logistics Hub", "Logistics", "Winnipeg", [
+            "Supply Chain Intern", "Transportation Planning Intern",
+            "Warehouse Operations Intern", "Procurement Intern",
+        ]),
+        ("Meridian Media Collective", "Media", "Kingston", [
+            "Editorial Intern", "Social Media Intern",
+            "Brand Strategy Intern", "Video Production Intern",
+        ]),
+        ("Lakeside Legal Partners", "Law", "Regina", [
+            "Legal Research Intern", "Corporate Law Intern",
+            "Family Law Intern", "Contract Administration Intern",
+        ]),
+        ("Nimbus Air Services", "Aviation", "Kelowna", [
+            "Flight Operations Intern", "Ground Services Intern",
+            "Airport Management Intern", "Safety Systems Intern",
+        ]),
+        ("Dune & Coast Hospitality", "Hospitality", "Charlottetown", [
+            "Guest Experience Intern", "Event Planning Intern",
+            "Food & Beverage Intern", "Revenue Management Intern",
+        ]),
+        ("Atlantic Retail Group", "Retail", "St. John's", [
+            "Merchandising Intern", "Customer Insights Intern",
+            "E-commerce Intern", "Store Operations Intern",
+        ]),
+        ("Terraform Urban Design", "Architecture", "Quebec City", [
+            "Urban Planning Intern", "Landscape Design Intern",
+            "Architectural Drafting Intern", "Project Coordination Intern",
+        ]),
+        ("Cobalt Financial Advisory", "Finance", "Calgary", [
+            "Investment Analyst Intern", "Risk Assessment Intern",
+            "Tax Advisory Intern", "Wealth Management Intern",
+        ]),
+        ("Northwood Community Health", "Healthcare", "Hamilton", [
+            "Patient Services Intern", "Compliance Intern",
+            "Care Coordination Intern", "Health Data Intern",
+        ]),
+        ("Summit Robotics Lab", "Robotics", "Mississauga", [
+            "Robotics Software Intern", "Systems Integration Intern",
+            "Industrial Automation Intern", "Control Systems Intern",
+        ]),
+        ("Evergreen Advisory Group", "Consulting", "Ottawa", [
+            "Business Consulting Intern", "Operations Analyst Intern",
+            "Market Entry Intern", "Client Experience Intern",
+        ]),
+    ]
+
+    for number, (name, discipline, location, titles) in enumerate(company_seed, start=1):
+        demo_users.append(
+            (
+                f"company{number:02d}",
+                f"company{number:02d}@example.com",
+                f"company{number:02d}pass",
+                "company",
+            )
+        )
+
     created = 0
     skipped = 0
+    vacancies_created = 0
+    vacancies_skipped = 0
+    students_created = 0
+    students_skipped = 0
+    applications_created = 0
+    applications_skipped = 0
+    applications_removed = 0
+    documents_created = 0
     with get_cli_session() as session:
         repo = UserRepository(session)
+        vacancy_repo = VacancyRepository(session)
+        application_repo = ApplicationRepository(session)
         for username, email, password, role in demo_users:
-            if repo.get_by_username(username):
+            user = repo.get_by_username(username)
+            if user:
                 print(f"  skip  {username} (already exists)")
                 skipped += 1
-                continue
-            payload_cls = AdminCreate if role == "admin" else RegularUserCreate
-            repo.create(
-                payload_cls(
-                    username=username,
-                    email=email,
-                    password=encrypt_password(password),
-                    role=role,
+            else:
+                payload_cls = {
+                    "admin": AdminCreate,
+                    "company": CompanyCreate,
+                }.get(role, RegularUserCreate)
+                user = repo.create(
+                    payload_cls(
+                        username=username,
+                        email=email,
+                        password=encrypt_password(password),
+                        role=role,
+                    )
                 )
+                print(f"  create {username} ({role})")
+                created += 1
+
+            if role != "company":
+                continue
+
+            company_number = int(username.removeprefix("company"))
+            company_name, discipline, location, titles = company_seed[company_number - 1]
+            profile_image_url = ensure_company_profile_image(
+                username,
+                company_name,
+                discipline,
             )
-            print(f"  create {username} ({role})")
-            created += 1
+            repo.update_profile(
+                user.id,
+                UserProfileUpdate(
+                    company_name=company_name,
+                    email=user.email,
+                    location=location,
+                ),
+                profile_image_url,
+            )
+            for title in titles:
+                if vacancy_repo.get_by_company_and_title(user.id, title):
+                    vacancies_skipped += 1
+                    continue
+                vacancy_repo.create(
+                    InternshipVacancy(
+                        company_id=user.id,
+                        title=title,
+                        description=(
+                            f"Join {company_name}'s {discipline.lower()} team "
+                            f"and gain practical experience through a guided internship."
+                        ),
+                        location=location,
+                        status="Published",
+                    )
+                )
+                vacancies_created += 1
+
+        student_seed = [
+            ("Avery", "Morgan", "3rd Year Undergraduate"),
+            ("Jordan", "Lee", "Associate's Degree Graduate"),
+            ("Taylor", "Patel", "2nd Year Postgraduate"),
+            ("Riley", "Chen", "1st Year Undergraduate"),
+            ("Casey", "Rivera", "4th Year Undergraduate"),
+            ("Morgan", "Bennett", "1st Year Postgraduate"),
+            ("Quinn", "Singh", "3rd Year Undergraduate"),
+            ("Cameron", "Brooks", "Associate's Degree Graduate"),
+            ("Drew", "Wilson", "2nd Year Undergraduate"),
+            ("Parker", "Martin", "1st Year Undergraduate"),
+            ("Harper", "Ward", "2nd Year Undergraduate"),
+            ("Sage", "Patel", "3rd Year Undergraduate"),
+            ("Mila", "Nguyen", "1st Year Postgraduate"),
+            ("Emerson", "Thompson", "4th Year Undergraduate"),
+            ("Skyler", "Ali", "Associate's Degree Graduate"),
+            ("Noah", "Gonzalez", "2nd Year Postgraduate"),
+            ("Ari", "Scott", "3rd Year Undergraduate"),
+            ("Blake", "Brown", "1st Year Undergraduate"),
+            ("Ellis", "Kim", "4th Year Undergraduate"),
+            ("Rowan", "Young", "2nd Year Postgraduate"),
+            ("Jamie", "Johnson", "Associate's Degree Graduate"),
+            ("Dakota", "Hall", "3rd Year Undergraduate"),
+            ("Finley", "Adams", "1st Year Undergraduate"),
+            ("Reese", "Flores", "3rd Year Undergraduate"),
+            ("Bailey", "Norris", "2nd Year Undergraduate"),
+            ("Morgan", "Miller", "4th Year Undergraduate"),
+            ("Alex", "Perez", "Associate's Degree Graduate"),
+            ("Chris", "Roberts", "2nd Year Postgraduate"),
+            ("Harley", "Turner", "1st Year Undergraduate"),
+            ("Remy", "Campbell", "3rd Year Undergraduate"),
+            ("Jordan", "Hernandez", "2nd Year Undergraduate"),
+            ("Taylor", "Evans", "4th Year Undergraduate"),
+            ("Peyton", "Green", "Associate's Degree Graduate"),
+            ("Carter", "Hill", "1st Year Postgraduate"),
+            ("Sawyer", "Baker", "3rd Year Undergraduate"),
+            ("Parker", "Rivera", "2nd Year Undergraduate"),
+            ("Rory", "King", "4th Year Undergraduate"),
+            ("Casey", "Price", "Associate's Degree Graduate"),
+            ("Sam", "Wright", "1st Year Undergraduate"),
+            ("Jules", "Long", "3rd Year Undergraduate"),
+            ("Kendall", "Ross", "2nd Year Postgraduate"),
+            ("Riley", "Hughes", "4th Year Undergraduate"),
+            ("Sydney", "Cooper", "Associate's Degree Graduate"),
+            ("Devon", "Peterson", "1st Year Undergraduate"),
+            ("Shay", "Gray", "3rd Year Undergraduate"),
+            ("Ashton", "Ramirez", "2nd Year Undergraduate"),
+            ("Hayden", "James", "4th Year Undergraduate"),
+            ("Logan", "Bennett", "1st Year Postgraduate"),
+            ("Avery", "Foster", "3rd Year Undergraduate"),
+            ("Charlie", "Moore", "2nd Year Undergraduate"),
+        ]
+        student_users = []
+        for number, (first_name, last_name, education_level) in enumerate(student_seed, start=1):
+            username = f"student{number:02d}"
+            user = repo.get_by_username(username)
+            if user:
+                students_skipped += 1
+            else:
+                user = repo.create(
+                    StudentCreate(
+                        username=username,
+                        email=f"{username}@example.com",
+                        password=encrypt_password(f"{username}pass"),
+                        first_name=first_name,
+                        last_name=last_name,
+                        education_level=education_level,
+                        profile_image_url=(
+                            f"https://i.pravatar.cc/240?img={number}"
+                        ),
+                    )
+                )
+                students_created += 1
+            repo.update_student_profile(
+                user.id,
+                StudentProfileUpdate(
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=user.email,
+                    education_level=education_level,
+                ),
+            )
+            student_users.append(user)
+
+        published_vacancies = vacancy_repo.list_published()
+        demo_document_path = (
+            "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/"
+            "resources/pdf/dummy.pdf"
+        )
+        student_ids = [student.id for student in student_users]
+        applicant_map = {}
+        rng = random.Random(42)
+        for vacancy in published_vacancies:
+            applicant_ids = rng.sample(student_ids, k=min(10, len(student_ids)))
+            applicant_map[vacancy.id] = set(applicant_ids)
+
+        for student in student_users:
+            target_vacancy_ids = {
+                vacancy_id
+                for vacancy_id, applicant_ids in applicant_map.items()
+                if student.id in applicant_ids
+            }
+            applications_removed += application_repo.remove_seeded_applications_not_in_targets(
+                student_id=student.id,
+                target_vacancy_ids=target_vacancy_ids,
+                demo_document_path=demo_document_path,
+            )
+
+        for vacancy in published_vacancies:
+            applicant_ids = sorted(applicant_map.get(vacancy.id, set()))
+            for student_id in applicant_ids:
+                application = application_repo.get_by_student_and_vacancy(
+                    student_id,
+                    vacancy.id,
+                )
+                if application:
+                    applications_skipped += 1
+                    continue
+
+                application = application_repo.create_application(
+                    student_id=student_id,
+                    vacancy_id=vacancy.id,
+                )
+                document = application_repo.create_document(
+                    name=f"student{student_id}-resume.pdf",
+                    file_path=demo_document_path,
+                )
+                application_repo.attach_document(application.id, document.id)
+                applications_created += 1
+                documents_created += 1
 
     print(f"Seed done — created {created}, skipped {skipped}.")
+    print(
+        f"Vacancies — created {vacancies_created}, "
+        f"skipped {vacancies_skipped}."
+    )
+    print(
+        f"Students — created {students_created}, skipped {students_skipped}."
+    )
+    print(
+        f"Applications — created {applications_created}, "
+        f"skipped {applications_skipped}, old demo records replaced {applications_removed}; "
+        f"documents created {documents_created}."
+    )
     print("Login with bob/bobpass or admin/adminpass")
+    print("Company logins use company01/company01pass through company10/company10pass")
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -239,7 +541,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_seed = sub.add_parser(
         "seed",
-        help="Insert demo users only (idempotent; also runs as part of init)",
+        help="Insert demo users, companies, and vacancies (idempotent)",
     )
     p_seed.set_defaults(func=cmd_seed)
 

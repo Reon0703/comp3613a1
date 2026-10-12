@@ -1,0 +1,160 @@
+{% extends "authenticated-base.html" %}
+{% block title %}{{ vacancy.title }}{% endblock %}
+
+{% block additional_styles %}
+<style>
+  .detail-page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .detail-hero,
+  .detail-panel {
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(18, 51, 63, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 12px 24px rgba(15, 26, 31, 0.06);
+  }
+
+  .detail-hero {
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+  }
+
+  .detail-hero-image {
+    display: block;
+    width: 100%;
+    max-height: 360px;
+    aspect-ratio: 16 / 7;
+    object-fit: cover;
+  }
+
+  .detail-hero-copy {
+    padding: 1.5rem;
+  }
+
+  .detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.65fr);
+    gap: 1.25rem;
+  }
+
+  .detail-panel {
+    padding: 1.35rem;
+  }
+
+  .company-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .company-identity img {
+    width: 56px;
+    height: 56px;
+    border-radius: 0.75rem;
+    object-fit: cover;
+  }
+
+  .document-list {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .document-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid rgba(18, 51, 63, 0.12);
+    border-radius: 0.75rem;
+    color: var(--brand-ink-strong);
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .document-link:hover {
+    border-color: var(--brand-accent-2);
+    color: var(--brand-accent);
+  }
+
+  @media (max-width: 767px) {
+    .detail-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .detail-hero-image {
+      aspect-ratio: 16 / 9;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 detail-page">
+  <a class="btn btn-sm btn-outline-secondary mb-3" href="{{ url_for('browse_internships') }}">
+    <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">arrow_back</span>
+    Back to internships
+  </a>
+
+  <section class="detail-hero">
+    {% if vacancy.image_url %}
+    <img class="detail-hero-image" src="{{ vacancy.image_url }}" alt="Image for {{ vacancy.title }}">
+    {% elif vacancy.company and vacancy.company.profile_image_url %}
+    <img class="detail-hero-image" src="{{ vacancy.company.profile_image_url }}" alt="{{ vacancy.company.display_name }} profile image">
+    {% endif %}
+    <div class="detail-hero-copy">
+      <div class="text-uppercase small fw-semibold text-muted mb-2">{{ vacancy.location or 'Location not specified' }}</div>
+      <h1 class="h2 mb-2">{{ vacancy.title }}</h1>
+      <span class="badge text-bg-success">Published</span>
+    </div>
+  </section>
+
+  <div class="detail-layout">
+    <section class="detail-panel">
+      <h2 class="h5 mb-3">Internship details</h2>
+      <p class="text-secondary mb-0" style="white-space: pre-line">{{ vacancy.description }}</p>
+    </section>
+
+    <aside class="detail-panel">
+      <div class="company-identity">
+        {% if vacancy.company and vacancy.company.profile_image_url %}
+        <img src="{{ vacancy.company.profile_image_url }}" alt="{{ vacancy.company.display_name }} profile image">
+        {% endif %}
+        <div>
+          <div class="small text-muted">Offered by</div>
+          <h2 class="h6 mb-0">{{ vacancy.company.display_name if vacancy.company else 'Company' }}</h2>
+        </div>
+      </div>
+
+      <h2 class="h5 mb-3">Supplementary documents</h2>
+      {% set available_documents = vacancy.documents|selectattr('document')|list %}
+      {% if available_documents %}
+      <div class="document-list">
+        {% for vacancy_document in available_documents %}
+        <a class="document-link" href="{{ url_for('download_vacancy_document', vacancy_id=vacancy.id, document_id=vacancy_document.document.id) }}">
+          <span class="d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined" aria-hidden="true">description</span>
+            <span>{{ vacancy_document.document.name }}</span>
+          </span>
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">There are no supplementary documents for this internship.</p>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div class="mt-4">
+    {% if already_applied %}
+    <button class="btn btn-outline-secondary" type="button" disabled>Application submitted</button>
+    {% else %}
+    <a class="btn btn-primary" href="{{ url_for('browse_internships') }}">Return to internships to apply</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

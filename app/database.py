@@ -3,6 +3,7 @@ import threading
 import time
 from contextlib import contextmanager
 
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import DBAPIError, OperationalError, ProgrammingError
 from sqlmodel import SQLModel, Session, create_engine
 
@@ -38,6 +39,66 @@ def create_db_and_tables() -> None:
     import app.models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+    _add_vacancy_image_column()
+    _add_vacancy_status_column()
+    _add_user_profile_columns()
+
+
+def _add_vacancy_image_column() -> None:
+    """Add the optional vacancy image field to databases created by older builds."""
+    inspector = inspect(engine)
+    if not inspector.has_table("internshipvacancy"):
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("internshipvacancy")}
+    if "image_url" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE internshipvacancy ADD COLUMN image_url VARCHAR")
+            )
+
+
+def _add_vacancy_status_column() -> None:
+    """Add and backfill explicit vacancy statuses for older databases."""
+    inspector = inspect(engine)
+    if not inspector.has_table("internshipvacancy"):
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("internshipvacancy")}
+    if "status" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE internshipvacancy ADD COLUMN status VARCHAR DEFAULT 'Draft'")
+            )
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE internshipvacancy SET status = 'Published' "
+                "WHERE is_published = 1 AND status = 'Draft'"
+            )
+        )
+
+
+def _add_user_profile_columns() -> None:
+    """Add company profile fields to users created by older builds."""
+    inspector = inspect(engine)
+    if not inspector.has_table("user"):
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("user")}
+    missing_columns = {
+        "company_name": "VARCHAR",
+        "phone": "VARCHAR",
+        "location": "VARCHAR",
+        "profile_image_url": "VARCHAR",
+    }
+    for column_name, column_type in missing_columns.items():
+        if column_name not in columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(f"ALTER TABLE user ADD COLUMN {column_name} {column_type}")
+                )
 
 
 def drop_all() -> None:
