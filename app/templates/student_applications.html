@@ -10,11 +10,12 @@
   }
 
   .applications-header,
-  .application-row,
+  .application-card,
   .applications-empty {
     background: rgba(255, 255, 255, 0.84);
     border: 1px solid rgba(18, 51, 63, 0.08);
-    border-radius: 0.9rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 22px rgba(15, 26, 31, 0.05);
   }
 
   .applications-header {
@@ -23,15 +24,27 @@
 
   .application-list {
     display: grid;
-    gap: 0.8rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
   }
 
-  .application-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.15rem;
+  .application-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .application-card-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .application-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 1.15rem;
   }
 
   .application-status {
@@ -46,27 +59,27 @@
     font-weight: 700;
   }
 
-  .application-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.75rem;
+  .application-card-body .application-card-actions {
+    margin-top: auto;
   }
 
-  .application-status.submitted,
+  .application-status.submitted{
+    background: linear-gradient(90deg, #94B0B7, #C2C8C5);
+    color: #0F1A1F;
+  }
   .application-status.under-review {
-    background: rgba(37, 99, 235, 0.1);
-    color: #1d4ed8;
+    background: linear-gradient(90deg, #e7d8b4, #d9bf80);
+    color: #5a3d12;
   }
 
   .application-status.shortlisted {
-    background: rgba(22, 163, 74, 0.12);
-    color: #166534;
+    background: linear-gradient(90deg, #e4f0e9, #bfd8ca);
+    color: #24533f;
   }
 
   .application-status.rejected {
-    background: rgba(220, 38, 38, 0.1);
-    color: #b91c1c;
+    background: linear-gradient(90deg, #f6e8e8, #e8c7c8);
+    color: #83383b;
   }
 
   .applications-empty {
@@ -93,14 +106,15 @@
     font-size: 0.78rem;
   }
 
-  @media (max-width: 575px) {
-    .application-row {
-      grid-template-columns: 1fr;
-      align-items: start;
+  @media (max-width: 991px) {
+    .application-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
 
-    .application-actions {
-      align-items: flex-start;
+  @media (max-width: 575px) {
+    .application-list {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -118,39 +132,35 @@
   <div class="application-list">
     {% for application in result.applications %}
     {% set vacancy = application.vacancy %}
-    <article class="application-row">
-      <div>
+    <article class="application-card">
+      {% if vacancy %}
+      {% set card_image = vacancy.image_url or (vacancy.company.profile_image_url if vacancy.company and vacancy.company.profile_image_url else '/static/img/company_profiles/company01.svg') %}
+      <img class="application-card-image" src="{{ card_image }}" alt="Image for {{ vacancy.title }}">
+      {% else %}
+      <img class="application-card-image" src="/static/img/company_profiles/company01.svg" alt="Internship listing image unavailable">
+      {% endif %}
+      <div class="application-card-body">
+        <div class="small text-muted mb-2">{{ vacancy.location or 'Location not specified' if vacancy else 'Internship listing unavailable' }}</div>
+        <h2 class="h5 mb-2">{{ vacancy.title if vacancy else 'Internship listing unavailable' }}</h2>
         {% if vacancy %}
-        <h2 class="h5 mb-1">{{ vacancy.title }}</h2>
-        <div class="text-muted small">
-          {{ vacancy.company.display_name if vacancy.company else 'Company' }}
-          · {{ vacancy.location or 'Location not specified' }}
-        </div>
-        {% else %}
-        <h2 class="h5 mb-1">Internship listing unavailable</h2>
+        <div class="small text-muted mb-2">{{ vacancy.company.display_name if vacancy.company else 'Company' }}</div>
+        <p class="text-secondary mb-3">{{ vacancy.description }}</p>
         {% endif %}
-        <div class="text-muted small mt-2">
-          Submitted {{ application.submission_date.strftime('%d %b %Y') if application.submission_date else 'Date unavailable' }}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <span class="application-status {{ application.status|lower|replace(' ', '-') }}">{{ application.status }}</span>
+          <div class="text-muted small">
+            Submitted {{ application.submission_date.strftime('%d %b %Y') if application.submission_date else 'Date unavailable' }}
+          </div>
         </div>
-        {% if application.documents %}
-        <div class="application-documents" aria-label="Attached documents">
-          {% for link in application.documents %}
-          {% if link.document %}
-          <span class="application-document">
-            <span class="material-symbols-outlined" aria-hidden="true">description</span>
-            {{ link.document.name }}
-          </span>
+        
+        <div class="application-card-actions d-grid gap-2">
+          {% if vacancy and vacancy.status == 'Published' %}
+          <a class="btn btn-outline-primary" href="{{ url_for('internship_detail_view', vacancy_id=vacancy.id) }}">View details</a>
           {% endif %}
-          {% endfor %}
-        </div>
-        {% endif %}
-      </div>
-      <div class="application-actions">
-        <span class="application-status {{ application.status|lower|replace(' ', '-') }}">{{ application.status }}</span>
-        <div class="d-flex flex-wrap gap-2">
+          {% if application.status == 'Submitted' %}
           <button
             type="button"
-            class="btn btn-sm btn-outline-primary"
+            class="btn btn-outline-primary"
             data-bs-toggle="modal"
             data-bs-target="#editApplicationModal"
             data-application-update-url="{{ url_for('student_application_edit', application_id=application.id) }}"
@@ -159,9 +169,10 @@
             <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">edit</span>
             Edit
           </button>
+          {% endif %}
           <form method="post" action="{{ url_for('student_application_delete', application_id=application.id) }}" onsubmit="return confirm('Delete this application? This cannot be undone.');">
             <input type="hidden" name="page" value="{{ result.pagination.current_page }}">
-            <button type="submit" class="btn btn-sm btn-outline-danger">
+            <button type="submit" class="btn btn-outline-danger w-100">
               <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">delete</span>
               Delete Application
             </button>

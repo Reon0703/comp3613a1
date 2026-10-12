@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.dependencies.auth import AuthDep
 from app.dependencies.session import SessionDep
+from app.models.vacancy import FIELD_OF_STUDY_OPTIONS
 from app.repositories.vacancy import VacancyRepository
 from app.services.vacancy_service import VacancyService
 from app.utilities.flash import flash
@@ -25,6 +26,7 @@ async def company_vacancies_view(
             "user": user,
             "vacancies": vacancies,
             "applicant_counts": applicant_counts,
+            "field_of_study_options": FIELD_OF_STUDY_OPTIONS,
         },
     )
 
@@ -37,6 +39,7 @@ async def company_vacancies_create(
     title: str = Form(...),
     description: str = Form(...),
     location: str = Form(""),
+    field_of_study: str = Form(""),
     status_value: str = Form("Draft", alias="status"),
     vacancy_image: UploadFile | None = File(None),
 ):
@@ -53,6 +56,7 @@ async def company_vacancies_create(
             title=title,
             description=description,
             location=location,
+            field_of_study=field_of_study,
             image_url=image_url,
             status=status_value,
         )
@@ -81,6 +85,7 @@ async def company_vacancies_update(
     title: str = Form(...),
     description: str = Form(...),
     location: str = Form(""),
+    field_of_study: str = Form(""),
     status_value: str = Form("Draft", alias="status"),
     vacancy_image: UploadFile | None = File(None),
 ):
@@ -92,16 +97,24 @@ async def company_vacancies_update(
                 await vacancy_image.read(),
                 vacancy_image.content_type,
             )
-        service.update_vacancy(
+        update_result = service.update_vacancy(
             vacancy_id=vacancy_id,
             company_id=user.id,
             title=title,
             description=description,
             location=location,
             status=status_value,
+            field_of_study=field_of_study,
             image_url=image_url,
         )
-        flash(request, "Internship vacancy updated successfully.", "success")
+        if update_result.draft_status_blocked:
+            flash(
+                request,
+                "Vacancy details were updated, but its status remains Published because it has applicants.",
+                "warning",
+            )
+        else:
+            flash(request, "Internship vacancy updated successfully.", "success")
     except ValueError as exc:
         flash(request, str(exc), "danger")
     except Exception:  # noqa: BLE001

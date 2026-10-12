@@ -1,5 +1,6 @@
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, func, select
+from sqlalchemy import case
+from sqlmodel import Session, func, select, update
 
 from app.models.application import Application, ApplicationDocument
 from app.models.document import Document
@@ -120,6 +121,13 @@ class ApplicationRepository:
         )
         return self.db.exec(statement).one_or_none()
 
+    def get_for_student(
+        self,
+        application_id: int,
+        student_id: int,
+    ) -> Application | None:
+        return self._get_for_student(application_id, student_id)
+
     def replace_student_application_document(
         self,
         application_id: int,
@@ -128,10 +136,13 @@ class ApplicationRepository:
         file_path: str,
         document_type: str,
         size_bytes: int,
+        required_status: str,
     ) -> tuple[Application, list[str]] | None:
         application = self._get_for_student(application_id, student_id)
         if application is None:
             return None
+        if application.status != required_status:
+            raise ValueError("Only applications with Submitted status can be edited.")
 
         old_documents = [
             link.document for link in application.documents if link.document
@@ -295,6 +306,7 @@ class ApplicationRepository:
         vacancy_id: int,
         query: str | None = None,
         education_level: str | None = None,
+        status_sort: str | None = None,
         page: int = 1,
         limit: int = 12,
     ) -> tuple[list[Application], Pagination]:
@@ -320,6 +332,12 @@ class ApplicationRepository:
         )
         total_count = self.db.exec(count_statement).one()
         offset = (page - 1) * limit
+        ordering = [Application.submission_date.desc()]
+        if status_sort:
+            ordering.insert(
+                0,
+                case((Application.status == status_sort, 0), else_=1),
+            )
         statement = (
             select(Application)
             .join(User, Application.student_id == User.id)
@@ -330,7 +348,7 @@ class ApplicationRepository:
                     ApplicationDocument.document
                 ),
             )
-            .order_by(Application.submission_date.desc())
+            .order_by(*ordering)
             .offset(offset)
             .limit(limit)
         )
@@ -340,6 +358,23 @@ class ApplicationRepository:
             current_page=page,
             limit=limit,
         )
+
+    def finish_review_for_vacancy(self, vacancy_id: int) -> int:
+        statement = (
+            update(Application)
+            .where(
+                Application.vacancy_id == vacancy_id,
+                Application.status == Application.STATUS_UNDER_REVIEW,
+            )
+            .values(status=Application.STATUS_REJECTED)
+        )
+        try:
+            result = self.db.exec(statement)
+            self.db.commit()
+            return result.rowcount or 0
+        except Exception:
+            self.db.rollback()
+            raise
 
     def get_for_vacancy(
         self,

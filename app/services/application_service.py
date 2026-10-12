@@ -12,6 +12,11 @@ EDUCATION_LEVEL_FILTERS = (
     "Associate's",
     "Diploma",
 )
+APPLICATION_STATUS_SORT_OPTIONS = (
+    Application.STATUS_REJECTED,
+    Application.STATUS_SHORTLISTED,
+    Application.STATUS_UNDER_REVIEW,
+)
 
 
 @dataclass
@@ -20,8 +25,10 @@ class ApplicationBrowseResult:
     applications: list[Application]
     pagination: Pagination
     education_level_options: tuple[str, ...]
+    status_sort_options: tuple[str, ...]
     query: str | None = None
     education_level: str | None = None
+    status_sort: str | None = None
 
 
 @dataclass
@@ -62,15 +69,19 @@ class ApplicationService:
         vacancy_id: int,
         query: str | None = None,
         education_level: str | None = None,
+        status_sort: str | None = None,
         page: int = 1,
     ) -> ApplicationBrowseResult:
         vacancy = self._owned_vacancy(user, vacancy_id)
         if education_level not in EDUCATION_LEVEL_FILTERS:
             education_level = None
+        if status_sort not in APPLICATION_STATUS_SORT_OPTIONS:
+            status_sort = None
         applications, pagination = self.application_repo.list_for_vacancy(
             vacancy_id=vacancy.id,
             query=query,
             education_level=education_level,
+            status_sort=status_sort,
             page=page,
         )
         return ApplicationBrowseResult(
@@ -78,8 +89,10 @@ class ApplicationService:
             applications=applications,
             pagination=pagination,
             education_level_options=EDUCATION_LEVEL_FILTERS,
+            status_sort_options=APPLICATION_STATUS_SORT_OPTIONS,
             query=query,
             education_level=education_level,
+            status_sort=status_sort,
         )
 
     def get_review(
@@ -122,6 +135,10 @@ class ApplicationService:
             application_id,
             Application.STATUS_REJECTED,
         )
+
+    def finish_review(self, user: User, vacancy_id: int) -> int:
+        vacancy = self._owned_vacancy(user, vacancy_id)
+        return self.application_repo.finish_review_for_vacancy(vacancy.id)
 
     def _set_status(
         self,

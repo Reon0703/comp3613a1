@@ -13,12 +13,19 @@
     }
 
     #sidebar {
+        position: sticky;
+        top: 0;
+        flex: 0 0 250px;
         min-width: 250px;
         max-width: 250px;
+        height: 100vh;
         min-height: 100vh;
+        overflow-y: auto;
         transition: all 0.3s;
-        background: var(--brand-sidebar);
-        color: #fff;
+        background: var(--brand-sidebar); 
+        background-image: linear-gradient(180deg, var(--brand-sidebar-start), var(--brand-sidebar-end));
+        color: var(--brand-sidebar-text);
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     #sidebar.collapsed {
@@ -28,15 +35,28 @@
     #sidebar .nav-link {
         color: var(--brand-sidebar-text);
         font-weight: 500;
-    }
-
-    #sidebar .nav-link:hover,
-    #sidebar .nav-link.active {
-        color: #fff;
-        background-color: color-mix(in srgb, var(--brand-accent) 55%, #000);
         border-radius: 0.5rem;
     }
 
+    #sidebar .nav-link:hover{
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    #sidebar .nav-link.active {
+        color: var(--brand-nav-active-text);
+        background: var(--brand-nav-active);
+        font-weight: 600;
+    }
+    
+    #sidebar .nav-link.text-danger {
+        color: #f0a3a6 !important;
+    }
+    
+    #sidebar .nav-link.text-danger:hover {
+        background: rgba(165, 64, 68, 0.25);
+    }
+    
     #sidebar .brand-wordmark {
         color: #fff;
         font-size: 1.25rem;
@@ -63,7 +83,7 @@
 {% block content %}
 <div id="wrapper">
     <nav id="sidebar" class="p-3 d-flex flex-column vh-100 collapsed">
-        <div class="brand-wordmark">Internship Platform</div>
+        <div class="brand-wordmark">HireMe</div>
 
         <ul class="nav nav-pills flex-column gap-2 flex-grow-1">
             <li class="nav-item">

@@ -227,7 +227,11 @@ def cmd_seed(args: argparse.Namespace) -> None:
                 profile_image_url,
             )
             for title in titles:
-                if vacancy_repo.get_by_company_and_title(user.id, title):
+                existing_vacancy = vacancy_repo.get_by_company_and_title(user.id, title)
+                if existing_vacancy:
+                    if not existing_vacancy.field_of_study:
+                        existing_vacancy.field_of_study = discipline
+                        vacancy_repo.update(existing_vacancy)
                     vacancies_skipped += 1
                     continue
                 vacancy_repo.create(
@@ -239,6 +243,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
                             f"and gain practical experience through a guided internship."
                         ),
                         location=location,
+                        field_of_study=discipline,
                         status="Published",
                     )
                 )

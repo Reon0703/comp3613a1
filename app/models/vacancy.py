@@ -1,6 +1,29 @@
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlmodel import Field, SQLModel,Relationship, UniqueConstraint
+from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint
+
+FIELD_OF_STUDY_OPTIONS = (
+    "Business",
+    "Science",
+    "Technology",
+    "Agriculture",
+    "Sports",
+    "Engineering",
+    "Energy",
+    "Creative",
+    "Health",
+    "Logistics",
+    "Media",
+    "Law",
+    "Aviation",
+    "Hospitality",
+    "Retail",
+    "Architecture",
+    "Finance",
+    "Healthcare",
+    "Robotics",
+    "Consulting",
+)
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -13,6 +36,7 @@ class InternshipVacancyBase(SQLModel):
     title: str = Field(index=True)
     description: str
     location: str = ""
+    field_of_study: Optional[str] = Field(default=None, index=True)
     image_url: Optional[str] = None
     status: str = "Draft"
     is_published: bool = False

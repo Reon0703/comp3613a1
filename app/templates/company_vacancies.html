@@ -248,6 +248,9 @@
             <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
               <div>
                 <h2 class="h5 mb-1">{{ vacancy.title }}</h2>
+                {% if vacancy.field_of_study %}
+                <div class="small text-muted">{{ vacancy.field_of_study }}</div>
+                {% endif %}
                 <div class="text-muted small">{{ vacancy.location or 'Location not specified' }}</div>
               </div>
               <span class="vacancy-status {{ vacancy.status|lower }}">
@@ -270,6 +273,7 @@
               data-vacancy-title="{{ vacancy.title|e }}"
               data-vacancy-description="{{ vacancy.description|e }}"
               data-vacancy-location="{{ vacancy.location|e }}"
+              data-vacancy-field-of-study="{{ vacancy.field_of_study or '' }}"
               data-vacancy-status="{{ vacancy.status }}"
               data-vacancy-image="{{ vacancy.image_url or '' }}"
             >
@@ -311,6 +315,16 @@
               <div class="mb-3">
                 <label for="vacancy-location" class="form-label">Location</label>
                 <input id="vacancy-location" name="location" class="form-control" placeholder="Remote / Toronto / London">
+              </div>
+
+              <div class="mb-3">
+                <label for="vacancy-field-of-study" class="form-label">Field of study</label>
+                <select id="vacancy-field-of-study" name="field_of_study" class="form-select" required>
+                  <option value="">Select a field of study</option>
+                  {% for field in field_of_study_options %}
+                  <option value="{{ field }}">{{ field }}</option>
+                  {% endfor %}
+                </select>
               </div>
 
               <div class="mb-3">
@@ -357,6 +371,7 @@
   const vacancySubmitButton = vacancyForm.querySelector("button[type='submit']");
   const vacancyTitleInput = document.getElementById("vacancy-title");
   const vacancyLocationInput = document.getElementById("vacancy-location");
+  const vacancyFieldOfStudyInput = document.getElementById("vacancy-field-of-study");
   const vacancyDescriptionInput = document.getElementById("vacancy-description");
   const vacancyStatusInput = document.getElementById("vacancy-status");
   const vacancyImageInput = document.getElementById("vacancy-image");
@@ -378,6 +393,8 @@
       vacancyForm.action = trigger.dataset.updateUrl;
       vacancyTitleInput.value = trigger.dataset.vacancyTitle;
       vacancyLocationInput.value = trigger.dataset.vacancyLocation;
+      vacancyFieldOfStudyInput.value = trigger.dataset.vacancyFieldOfStudy;
+      vacancyFieldOfStudyInput.required = false;
       vacancyDescriptionInput.value = trigger.dataset.vacancyDescription;
       vacancyStatusInput.value = trigger.dataset.vacancyStatus;
       vacancyImageInput.value = "";
@@ -394,6 +411,8 @@
     vacancySubmitButton.textContent = "Save vacancy";
     vacancyForm.action = "{{ url_for('company_vacancies_create') }}";
     vacancyForm.reset();
+    vacancyFieldOfStudyInput.required = true;
+    vacancyFieldOfStudyInput.value = "";
     vacancyStatusInput.value = "Draft";
     clearVacancyImagePreview();
   });

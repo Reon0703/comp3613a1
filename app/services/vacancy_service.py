@@ -1,7 +1,9 @@
 from pathlib import Path
+from dataclasses import dataclass
 from uuid import uuid4
 
-from app.models.vacancy import InternshipVacancy
+from app.models.application import Application
+from app.models.vacancy import FIELD_OF_STUDY_OPTIONS, InternshipVacancy
 
 
 UPLOAD_DIRECTORY = Path("app/static/uploads")
@@ -12,6 +14,12 @@ ALLOWED_IMAGE_TYPES = {
 }
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 VACANCY_STATUSES = {"Published", "Closed", "Draft"}
+
+
+@dataclass
+class VacancyUpdateResult:
+    vacancy: InternshipVacancy
+    draft_status_blocked: bool
 
 
 class VacancyService:
@@ -35,18 +43,22 @@ class VacancyService:
         title: str,
         description: str,
         location: str,
+        field_of_study: str,
         image_url: str | None = None,
         status: str = "Draft",
     ) -> InternshipVacancy:
         cleaned_title = (title or "").strip()
         cleaned_description = (description or "").strip()
         cleaned_location = (location or "").strip()
+        cleaned_field_of_study = (field_of_study or "").strip()
         cleaned_status = (status or "Draft").strip().title()
 
         if not cleaned_title:
             raise ValueError("Vacancy title is required.")
         if not cleaned_description:
             raise ValueError("Vacancy description is required.")
+        if cleaned_field_of_study not in FIELD_OF_STUDY_OPTIONS:
+            raise ValueError("Choose a valid field of study.")
         if cleaned_status not in VACANCY_STATUSES:
             raise ValueError("Choose Published, Closed, or Draft as the vacancy status.")
 
@@ -55,6 +67,7 @@ class VacancyService:
             title=cleaned_title,
             description=cleaned_description,
             location=cleaned_location,
+            field_of_study=cleaned_field_of_study,
             status=cleaned_status,
             is_published=cleaned_status == "Published",
             image_url=image_url,
@@ -72,27 +85,54 @@ class VacancyService:
         description: str,
         location: str,
         status: str,
+        field_of_study: str | None = None,
         image_url: str | None = None,
-    ) -> InternshipVacancy:
+    ) -> VacancyUpdateResult:
         vacancy = self.vacancy_repo.get_by_id(vacancy_id)
         if not vacancy or vacancy.company_id != company_id:
             raise ValueError("Vacancy not found.")
 
+        was_closed = vacancy.status == "Closed"
         cleaned_title = (title or "").strip()
         cleaned_description = (description or "").strip()
+        cleaned_field_of_study = (field_of_study or "").strip()
         cleaned_status = (status or "Draft").strip().title()
         if not cleaned_title:
             raise ValueError("Vacancy title is required.")
         if not cleaned_description:
             raise ValueError("Vacancy description is required.")
+        if cleaned_field_of_study and cleaned_field_of_study not in FIELD_OF_STUDY_OPTIONS:
+            raise ValueError("Choose a valid field of study.")
         if cleaned_status not in VACANCY_STATUSES:
             raise ValueError("Choose Published, Closed, or Draft as the vacancy status.")
+
+        draft_status_blocked = (
+            vacancy.status == "Published"
+            and cleaned_status == "Draft"
+            and self.vacancy_repo.has_applications(vacancy_id)
+        )
+        if draft_status_blocked:
+            cleaned_status = vacancy.status
 
         vacancy.title = cleaned_title
         vacancy.description = cleaned_description
         vacancy.location = (location or "").strip()
+        if cleaned_field_of_study:
+            vacancy.field_of_study = cleaned_field_of_study
         vacancy.status = cleaned_status
         vacancy.is_published = cleaned_status == "Published"
         if image_url:
             vacancy.image_url = image_url
-        return self.vacancy_repo.update(vacancy)
+        application_status = (
+            Application.STATUS_UNDER_REVIEW
+            if cleaned_status == "Closed" and not was_closed
+            else None
+        )
+        updated_vacancy = self.vacancy_repo.update(
+            vacancy,
+            application_status=application_status,
+        )
+        return VacancyUpdateResult(
+            vacancy=updated_vacancy,
+            draft_status_blocked=draft_status_blocked,
+        )

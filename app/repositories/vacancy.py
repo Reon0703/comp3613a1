@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from sqlmodel import Session, func, select
+from sqlmodel import Session, func, select, update
 
 from app.models.application import Application
 from app.models.vacancy import InternshipVacancy
@@ -61,9 +61,27 @@ class VacancyRepository:
     def get_by_id(self, vacancy_id: int) -> InternshipVacancy | None:
         return self.db.get(InternshipVacancy, vacancy_id)
 
-    def update(self, vacancy: InternshipVacancy) -> InternshipVacancy:
+    def has_applications(self, vacancy_id: int) -> bool:
+        statement = (
+            select(func.count())
+            .select_from(Application)
+            .where(Application.vacancy_id == vacancy_id)
+        )
+        return self.db.exec(statement).one() > 0
+
+    def update(
+        self,
+        vacancy: InternshipVacancy,
+        application_status: str | None = None,
+    ) -> InternshipVacancy:
         try:
             self.db.add(vacancy)
+            if application_status:
+                self.db.exec(
+                    update(Application)
+                    .where(Application.vacancy_id == vacancy.id)
+                    .values(status=application_status)
+                )
             self.db.commit()
             self.db.refresh(vacancy)
             return vacancy

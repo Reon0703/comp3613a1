@@ -54,6 +54,7 @@ erDiagram
     int company_id FK
     string title
     string description
+    string field_of_study
   }
   APPLICATION {
     int application_id PK
@@ -188,7 +189,27 @@ Company vacancy cards now show each vacancy's applicant total in a badge at the 
 
 Navigation polish: the shared authenticated sidenav now starts collapsed on first visit for both student and company pages. The menu toggle opens and closes it, persists that preference across page navigation in browser storage, and updates its accessible label and expanded state.
 
+Sidebar scroll polish: the authenticated sidenav now stays pinned to the viewport while page content scrolls and can scroll internally when its links exceed the available height.
+
 Student application management polish: My applications now provides an Edit action to replace the attached PDF and a Delete Application action. Both routes enforce student ownership; editing preserves review status, and deletion removes the application/document links while retaining any document still shared elsewhere. Browser verification is pending student observation.
+
+Application edit rule: students may replace an attached PDF only while their application status is `Submitted`. The service checks ownership and status before storing the upload, and the repository rechecks the status during replacement. Under Review, Shortlisted, and Rejected applications are not editable; deletion remains available.
+
+Student application page polish: My applications now uses the same responsive image-card format as Browse Internships, including vacancy/company imagery, details, status, attached documents, and bottom-aligned application actions.
+
+Company applicants page polish: added an `Applications` back button that returns to the company vacancy manager.
+
+Company applicants layout polish: applicant cards now follow the company vacancy card format with a responsive four-column grid, 4:3 profile image area, matching padding and status placement, and a separated Review action footer. A placeholder image is shown when a student has no profile photo.
+
+Workflow 3 review controls: the Applicants page can prioritize Rejected, Shortlisted, or Under Review applications, while retaining newest-first order within the selected status group. `Finish Review` changes only remaining Under Review applications for that company-owned vacancy to Rejected, confirms before submission, reports the number changed, and preserves the current search/sort/page context.
+
+Applicants filter polish: applicant-name search, education-level selection, and status sorting are now grouped in a modal opened by the `Filters` button. The modal retains active values and offers Apply filters, Clear filters, and Cancel actions; Finish Review remains directly available on the page.
+
+Student browse filter revision: vacancies now have a structured `field_of_study` value based on the existing seeded discipline categories. The startup migration adds the nullable column and backfills seeded vacancies from their existing discipline descriptions; legacy vacancies without a recognizable discipline remain unclassified and are available under All fields.
+
+Application status rules: company shortlist and reject actions set `Application.status` to `Shortlisted` and `Rejected`, respectively. When a vacancy transitions into `Closed`, all applications for it are set to `Under Review` in the same database transaction as the vacancy update. Reopening and closing it again repeats this transition. No schema migration is required.
+
+Vacancy status guard: a `Published` vacancy with one or more applications cannot be changed to `Draft`. Submitted title, description, location, and image edits still save; the company receives a warning that its status remains `Published`. Published vacancies without applications and other status transitions retain existing behavior.
 
 ## Deployed app
 

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Query, Request, status
+from fastapi import Form, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.dependencies.auth import AuthDep
@@ -27,6 +27,7 @@ def company_vacancy_applications_view(
     db: SessionDep,
     q: Annotated[str | None, Query(max_length=100)] = None,
     education_level: Annotated[str | None, Query(max_length=100)] = None,
+    status_sort: Annotated[str | None, Query(max_length=30)] = None,
     page: Annotated[int, Query(ge=1)] = 1,
 ):
     # === STUDENT SNIPPET: thin review list handler ===
@@ -37,6 +38,7 @@ def company_vacancy_applications_view(
             vacancy_id=vacancy_id,
             query=q,
             education_level=education_level,
+            status_sort=status_sort,
             page=page,
         )
     except ValueError as exc:
@@ -52,6 +54,54 @@ def company_vacancy_applications_view(
             "user": user,
             "result": result,
         },
+    )
+
+
+@router.post(
+    "/company/vacancies/{vacancy_id}/applications/finish-review",
+    response_class=HTMLResponse,
+    name="company_applications_finish_review",
+)
+def company_applications_finish_review(
+    request: Request,
+    vacancy_id: int,
+    user: AuthDep,
+    db: SessionDep,
+    q: str = Form(""),
+    education_level: str = Form(""),
+    status_sort: str = Form(""),
+    page: int = Form(1),
+):
+    service = _application_service(db)
+    try:
+        updated_count = service.finish_review(user, vacancy_id)
+        if updated_count:
+            flash(
+                request,
+                f"Review finished. {updated_count} application(s) moved to Rejected.",
+                "success",
+            )
+        else:
+            flash(request, "There were no applications under review.", "info")
+    except ValueError as exc:
+        flash(request, str(exc), "danger")
+        return RedirectResponse(
+            url=request.url_for("company_vacancies_view"),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    redirect_url = request.url_for(
+        "company_vacancy_applications_view",
+        vacancy_id=vacancy_id,
+    ).include_query_params(
+        q=q or None,
+        education_level=education_level or None,
+        status_sort=status_sort or None,
+        page=page,
+    )
+    return RedirectResponse(
+        url=str(redirect_url),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
     # === END STUDENT SNIPPET ===
 

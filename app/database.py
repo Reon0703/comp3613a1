@@ -4,8 +4,8 @@ import time
 from contextlib import contextmanager
 
 from sqlalchemy import inspect, text
-from sqlalchemy.exc import DBAPIError, OperationalError, ProgrammingError
-from sqlmodel import SQLModel, Session, create_engine
+from sqlalchemy.exc import DBAPIError, OperationalError
+from sqlmodel import SQLModel, Session, create_engine, select
 
 from app.config import get_settings
 
@@ -41,6 +41,7 @@ def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
     _add_vacancy_image_column()
     _add_vacancy_status_column()
+    _add_vacancy_field_of_study_column()
     _add_user_profile_columns()
 
 
@@ -75,9 +76,44 @@ def _add_vacancy_status_column() -> None:
         connection.execute(
             text(
                 "UPDATE internshipvacancy SET status = 'Published' "
-                "WHERE is_published = 1 AND status = 'Draft'"
-            )
+                "WHERE is_published = :published AND status = 'Draft'"
+            ),
+            {"published": True},
         )
+
+
+def _add_vacancy_field_of_study_column() -> None:
+    """Add field-of-study metadata and backfill seeded vacancies when recognizable."""
+    inspector = inspect(engine)
+    if not inspector.has_table("internshipvacancy"):
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("internshipvacancy")}
+    if "field_of_study" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE internshipvacancy ADD COLUMN field_of_study VARCHAR")
+            )
+
+    from app.models.vacancy import FIELD_OF_STUDY_OPTIONS, InternshipVacancy
+
+    with Session(engine) as session:
+        vacancies = session.exec(
+            select(InternshipVacancy).where(InternshipVacancy.field_of_study.is_(None))
+        ).all()
+        options_by_length = sorted(FIELD_OF_STUDY_OPTIONS, key=len, reverse=True)
+        for vacancy in vacancies:
+            description = vacancy.description.lower()
+            vacancy.field_of_study = next(
+                (
+                    option
+                    for option in options_by_length
+                    if f"{option.lower()} team" in description
+                ),
+                None,
+            )
+        if vacancies:
+            session.commit()
 
 
 def _add_user_profile_columns() -> None:
@@ -97,7 +133,7 @@ def _add_user_profile_columns() -> None:
         if column_name not in columns:
             with engine.begin() as connection:
                 connection.execute(
-                    text(f"ALTER TABLE user ADD COLUMN {column_name} {column_type}")
+                    text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_type}')
                 )
 
 
@@ -109,14 +145,11 @@ def is_db_not_ready_error(exc: BaseException) -> bool:
     """True when Postgres is unreachable or the schema/tables are missing."""
     if isinstance(exc, OperationalError):
         return True
-    if isinstance(exc, ProgrammingError):
-        return True
     if isinstance(exc, DBAPIError) and getattr(exc, "connection_invalidated", False):
         return True
 
-    text = str(exc).lower()
+    message = str(exc).lower()
     markers = (
-        "does not exist",
         "undefinedtable",
         "undefined table",
         "no such table",
@@ -130,7 +163,7 @@ def is_db_not_ready_error(exc: BaseException) -> bool:
         "too many connections",
         "ssl connection has been closed",
     )
-    return any(m in text for m in markers)
+    return any(m in message for m in markers)
 
 
 def ensure_db_and_tables(

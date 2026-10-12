@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import File, Form, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -25,10 +26,16 @@ def browse_internships(
     user: AuthDep,
     db: SessionDep,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    field_of_study: Annotated[list[str] | None, Query()] = None,
     page: Annotated[int, Query(ge=1)] = 1,
 ):
     service = _internship_service(db)
-    result = service.browse(user, query=q, page=page)
+    result = service.browse(
+        user,
+        query=q,
+        field_of_study=field_of_study,
+        page=page,
+    )
     return templates.TemplateResponse(
         request=request,
         name="student_internships.html",
@@ -125,6 +132,7 @@ async def apply_to_internship(
     db: SessionDep,
     application_document: UploadFile = File(...),
     q: str = Form(""),
+    field_of_study: list[str] = Form(default=[]),
     page: int = Form(1),
 ):
     service = _internship_service(db)
@@ -142,10 +150,13 @@ async def apply_to_internship(
     except Exception:  # noqa: BLE001
         flash(request, "Unable to submit your application right now.", "danger")
 
-    redirect_url = request.url_for("browse_internships").include_query_params(
-        q=q or None,
-        page=page,
+    redirect_params = [("page", str(page))]
+    if q:
+        redirect_params.append(("q", q))
+    redirect_params.extend(
+        ("field_of_study", field) for field in field_of_study
     )
+    redirect_url = f"{request.url_for('browse_internships')}?{urlencode(redirect_params)}"
     return RedirectResponse(
         url=str(redirect_url),
         status_code=status.HTTP_303_SEE_OTHER,

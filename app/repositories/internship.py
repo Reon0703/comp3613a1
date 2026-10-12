@@ -1,6 +1,7 @@
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, func, select
 
+from app.models.application import Application
 from app.models.vacancy import InternshipVacancy, VacancyDocument
 from app.utilities.pagination import Pagination
 
@@ -11,13 +12,24 @@ class InternshipRepository:
 
     def browse_published(
         self,
+        student_id: int,
         query: str | None = None,
+        field_of_study: list[str] | None = None,
         page: int = 1,
         limit: int = 12,
     ) -> tuple[list[InternshipVacancy], Pagination]:
         statement = select(InternshipVacancy).where(
-            InternshipVacancy.status == "Published"
+            InternshipVacancy.status == "Published",
+            ~InternshipVacancy.id.in_(
+                select(Application.vacancy_id).where(
+                    Application.student_id == student_id
+                )
+            )
         )
+        if field_of_study:
+            statement = statement.where(
+                InternshipVacancy.field_of_study.in_(field_of_study)
+            )
         if query:
             search = f"%{query.strip()}%"
             statement = statement.where(

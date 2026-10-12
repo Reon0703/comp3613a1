@@ -3,7 +3,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 from uuid import uuid4
 
+from app.models.application import Application
 from app.models.user import User
+from app.models.vacancy import FIELD_OF_STUDY_OPTIONS
 from app.repositories.application import ApplicationRepository
 from app.repositories.internship import InternshipRepository
 from app.utilities.pagination import Pagination
@@ -17,7 +19,8 @@ class InternshipBrowseResult:
     vacancies: list
     pagination: Pagination
     query: str | None = None
-    applied_vacancy_ids: set[int] | None = None
+    field_of_study_options: tuple[str, ...] = FIELD_OF_STUDY_OPTIONS
+    selected_fields_of_study: tuple[str, ...] = ()
 
 
 class InternshipService:
@@ -33,23 +36,29 @@ class InternshipService:
         self,
         user: User,
         query: str | None = None,
+        field_of_study: list[str] | None = None,
         page: int = 1,
     ) -> InternshipBrowseResult:
         if not user.is_student:
             raise ValueError("Only student accounts can browse internships.")
 
-        vacancies, pagination = self.internship_repo.browse_published(
-            query=query,
-            page=page,
+        selected_field_set = set(field_of_study or [])
+        selected_fields = tuple(
+            option
+            for option in FIELD_OF_STUDY_OPTIONS
+            if option in selected_field_set
         )
-        applied_vacancy_ids = self.application_repo.list_vacancy_ids_for_student(
-            user.id
+        vacancies, pagination = self.internship_repo.browse_published(
+            student_id=user.id,
+            query=query,
+            field_of_study=list(selected_fields),
+            page=page,
         )
         return InternshipBrowseResult(
             vacancies=vacancies,
             pagination=pagination,
             query=query,
-            applied_vacancy_ids=applied_vacancy_ids,
+            selected_fields_of_study=selected_fields,
         )
 
     def apply(
@@ -97,6 +106,12 @@ class InternshipService:
         if not user.is_student:
             raise ValueError("Only student accounts can edit their applications.")
 
+        application = self.application_repo.get_for_student(application_id, user.id)
+        if application is None:
+            raise ValueError("Application not found.")
+        if application.status != Application.STATUS_SUBMITTED:
+            raise ValueError("Only applications with Submitted status can be edited.")
+
         safe_name, stored_path = self._store_application_document(filename, content)
         try:
             result = self.application_repo.replace_student_application_document(
@@ -106,6 +121,7 @@ class InternshipService:
                 file_path=str(stored_path),
                 document_type="application/pdf",
                 size_bytes=len(content),
+                required_status=Application.STATUS_SUBMITTED,
             )
             if result is None:
                 raise ValueError("Application not found.")

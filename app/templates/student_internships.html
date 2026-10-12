@@ -33,6 +33,20 @@
     width: min(520px, 100%);
   }
 
+  .student-toolbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .field-of-study-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
   .internship-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -82,6 +96,10 @@
     .student-toolbar form {
       flex-direction: column;
     }
+
+    .field-of-study-options {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 {% endblock %}
@@ -94,11 +112,20 @@
       <h1 class="h3 mb-1">Browse internship opportunities</h1>
       <p class="text-muted mb-0">Explore currently published opportunities by role, location, or discipline.</p>
     </div>
-    <form method="get" action="{{ url_for('browse_internships') }}">
-      <label for="internship-search" class="visually-hidden">Search internships</label>
-      <input id="internship-search" name="q" value="{{ result.query or '' }}" class="form-control" placeholder="Search roles or locations">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </form>
+    <div class="student-toolbar-actions">
+      <form method="get" action="{{ url_for('browse_internships') }}">
+        <label for="internship-search" class="visually-hidden">Search internships</label>
+        <input id="internship-search" name="q" value="{{ result.query or '' }}" class="form-control" placeholder="Search roles or locations">
+        {% for field in result.selected_fields_of_study %}
+        <input type="hidden" name="field_of_study" value="{{ field }}">
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+      <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fieldOfStudyModal">
+        <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">filter_list</span>
+        Filter By
+      </button>
+    </div>
   </div>
 
   {% if result.vacancies %}
@@ -116,9 +143,6 @@
         <p class="text-secondary mb-4">{{ vacancy.description }}</p>
         <div class="d-grid gap-2 mt-auto">
           <a class="btn btn-outline-primary" href="{{ url_for('internship_detail_view', vacancy_id=vacancy.id) }}">View details</a>
-          {% if vacancy.id in result.applied_vacancy_ids %}
-          <button type="button" class="btn btn-outline-secondary" disabled>Application submitted</button>
-          {% else %}
           <button
             type="button"
             class="btn btn-primary"
@@ -129,7 +153,6 @@
           >
             Apply
           </button>
-          {% endif %}
         </div>
       </div>
     </article>
@@ -140,21 +163,59 @@
   <nav aria-label="Internship pages">
     <ul class="pagination justify-content-center">
       {% if result.pagination.has_prev %}
-      <li class="page-item"><a class="page-link" href="?q={{ result.query or '' }}&page={{ result.pagination.prev_num }}">Previous</a></li>
+      <li class="page-item"><a class="page-link" href="?q={{ result.query or '' }}{% for field in result.selected_fields_of_study %}&field_of_study={{ field }}{% endfor %}&page={{ result.pagination.prev_num }}">Previous</a></li>
       {% endif %}
       <li class="page-item active"><span class="page-link">{{ result.pagination.page }}</span></li>
       {% if result.pagination.has_next %}
-      <li class="page-item"><a class="page-link" href="?q={{ result.query or '' }}&page={{ result.pagination.next_num }}">Next</a></li>
+      <li class="page-item"><a class="page-link" href="?q={{ result.query or '' }}{% for field in result.selected_fields_of_study %}&field_of_study={{ field }}{% endfor %}&page={{ result.pagination.next_num }}">Next</a></li>
       {% endif %}
     </ul>
   </nav>
   {% endif %}
   {% else %}
   <div class="empty-state">
-    <h2 class="h5 mb-2">No published internships found</h2>
-    <p class="mb-0">Try another search or check back when companies publish new opportunities.</p>
+    <h2 class="h5 mb-2">No matching internships found</h2>
+    <p class="mb-0">Try changing your search or selected fields of study, or check back when new opportunities are published.</p>
   </div>
   {% endif %}
+</div>
+
+<div class="modal fade" id="fieldOfStudyModal" tabindex="-1" aria-labelledby="fieldOfStudyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="text-uppercase small fw-semibold text-muted mb-1">Internship filters</div>
+          <h2 class="modal-title h5 mb-0" id="fieldOfStudyModalLabel">Filter by field of study</h2>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="get" action="{{ url_for('browse_internships') }}">
+        <div class="modal-body">
+          <label for="field-filter-search" class="form-label">Search internships</label>
+          <input id="field-filter-search" name="q" value="{{ result.query or '' }}" class="form-control mb-4" placeholder="Search roles or locations">
+          <fieldset>
+            <legend class="form-label">Fields of study</legend>
+            <div class="field-of-study-options">
+              {% for field in result.field_of_study_options %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="field-of-study-{{ loop.index }}" name="field_of_study" value="{{ field }}" {% if field in result.selected_fields_of_study %}checked{% endif %}>
+                <label class="form-check-label" for="field-of-study-{{ loop.index }}">{{ field }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </fieldset>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <a class="btn btn-outline-secondary" href="{{ url_for('browse_internships') }}">Clear filters</a>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Apply filters</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="applyModal" tabindex="-1" aria-labelledby="applyModalLabel" aria-hidden="true">
@@ -181,6 +242,9 @@
           >
           <div class="form-text">Upload one PDF, up to 10 MB. You can apply once to each internship.</div>
           <input type="hidden" name="q" value="{{ result.query or '' }}">
+          {% for field in result.selected_fields_of_study %}
+          <input type="hidden" name="field_of_study" value="{{ field }}">
+          {% endfor %}
           <input type="hidden" name="page" value="{{ result.pagination.page }}">
         </div>
         <div class="modal-footer">
