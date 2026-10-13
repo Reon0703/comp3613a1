@@ -97,7 +97,7 @@ The single wireframe covers all named workflows and shows the company-side vacan
 
 ## Theming
 
-Branding preferences and how they were applied (landing / login / register).
+The application uses the **HireMe** wordmark. The shared palette uses a `#94B0B7` to `#C2C8C5` page gradient with its blend hint at 65%, dark teal ink, and a `#4a707b` to `#12333F` accent gradient. Fraunces is used for display headings and Source Sans 3 for body text. The landing page, login, register, authenticated header, sidebar, navigation toggle, and welcome badge use the shared brand identity.
 
 ## Implementation notes
 
@@ -117,7 +117,7 @@ Polish update: the vacancy form now opens from a dedicated `Create vacancy` butt
 
 The modal now also supports an optional vacancy image. The upload field sits to the right of the text form, previews the selected image immediately in the browser, validates JPG/PNG/WEBP files up to 5 MB on the service layer, stores generated filenames under `app/static/uploads/`, and displays the saved image on the vacancy card. Existing databases receive the new optional `image_url` column through the startup schema check.
 
-Seed/migration update: the CLI now creates 10 company users (`company01` through `company10`) and 4 published vacancies per company across Business, Science, Technology, Agriculture, Sports, Engineering, Energy, Creative, Health, and Logistics. The seed is idempotent: the first run created 10 users and 40 vacancies, and a repeat run created 0 duplicates. Company passwords follow the pattern `company01pass` through `company10pass`.
+Seed/migration update: the CLI now creates 20 company users (`company01` through `company20`) and 4 published vacancies per company (80 total) across 20 disciplines. Company passwords follow the matching pattern `company01pass` through `company20pass`. Seeding is idempotent.
 
 Card layout update: each company receives a generated branded SVG profile image under `app/static/img/company_profiles/`. Vacancy cards now use a responsive four-column layout on wide screens and collapse for smaller screens. A vacancy's uploaded image is displayed first; when no vacancy image exists, the card displays the logged-in company's profile image. The `profile_image_url` user field is migrated automatically for existing databases.
 
@@ -129,7 +129,7 @@ Status update: the vacancy modal now uses a shared status dropdown in both creat
 
 Workflow 2 browse slice implemented: the student browse route calls `InternshipService`, which calls `InternshipRepository` to return published vacancies with title, description, and location search plus pagination. The student browse page presents the opportunities in a responsive card grid, and the authenticated navigation exposes Browse internships only to student-role users. Application submission is the next slice and will enforce the existing one-application-per-vacancy constraint.
 
-Student seed/migration update: the CLI now creates 10 student accounts (`student01` through `student10`) with passwords following the `student01pass` pattern. Each student receives a remote generic avatar URL from `i.pravatar.cc`, three submitted applications against published vacancies, and one remote generic PDF document record sourced from the W3C dummy PDF test asset per application. The first migration created 30 applications and 30 documents; a repeat run created 0 duplicates.
+Student seed/migration update: the CLI now creates 50 student accounts (`student01` through `student50`) with matching password patterns (`student01pass` through `student50pass`). Each student receives a remote generic avatar URL from `i.pravatar.cc`. The demo dataset targets 10 randomly distributed applications per vacancy across 80 published vacancies, with linked generic PDF records sourced from the W3C dummy PDF test asset. Seeding is idempotent and preserves real uploaded applications.
 
 Application submission slice implemented: each student vacancy card now opens an Apply modal requiring one PDF document (up to 10 MB). The POST route delegates to `InternshipService`, which checks student role, confirms the vacancy is still Published, rejects an existing student/vacancy application, validates the PDF signature and size, then asks `ApplicationRepository` to atomically create the Application, Document, and ApplicationDocument bridge. The database unique constraint remains the final duplicate-application guard. Uploaded resumes are stored under `app/uploads/applications/`, outside public static serving. After redirect, submitted vacancies display an `Application submitted` state. No schema migration was required because the existing tables already represent applications and documents.
 
@@ -209,20 +209,30 @@ Student browse filter revision: vacancies now have a structured `field_of_study`
 
 Application status rules: company shortlist and reject actions set `Application.status` to `Shortlisted` and `Rejected`, respectively. When a vacancy transitions into `Closed`, all applications for it are set to `Under Review` in the same database transaction as the vacancy update. Reopening and closing it again repeats this transition. No schema migration is required.
 
+Review-data migration: `python manage.py randomize-review-statuses` randomly closed 40 of 80 vacancies. Each closed vacancy now has exactly 4 Rejected, 3 Shortlisted, and 3 Under Review applications. The other 40 vacancies remain Published and their 400 applications remain Submitted. Database readback confirmed there were no closed-vacancy status-count mismatches. The command requires at least 7 applications per vacancy and refuses to rerun after any vacancy is Closed, preventing accidental reshuffling.
+
 Vacancy status guard: a `Published` vacancy with one or more applications cannot be changed to `Draft`. Submitted title, description, location, and image edits still save; the company receives a warning that its status remains `Published`. Published vacancies without applications and other status transitions retain existing behavior.
+
+Phase 5 final visual polish: the public/authenticated product wordmark is now HireMe. The authenticated header centers the brand title and places the navigation toggle and welcome badge at opposite sides; the company and student dashboards use simplified workflow headings and primary actions. Student Browse Internships and My Applications use responsive four-column card grids on wide screens, reducing to three columns below 1400px, two below 992px, and one on narrow screens. The internship detail backlink now uses the primary button style and has a unique link identity rather than reusing the sidebar toggle ID.
+
+Phase 5 closeout checks: diagnostics pass for the latest changed CSS/templates, the FastAPI app imports, and all updated Jinja templates compile. The student should refresh the app and confirm the latest visual polish in the browser before beginning Phase 6 deployment; this visual confirmation is not recorded here.
 
 ## Deployed app
 
 Phase 6. Public Render URL (not localhost). Markers open this to mark the three workflows.
 
-https://
+Deployment method: manual Render setup.
+
+Public URL: https://comp3613a1-xr31.onrender.com
+
+Health check: manually confirmed `GET /health` returns `{"ok":true}`.
 
 ## Logins
 
-Every account a marker needs, including extra users you added. Starter accounts:
+Seeded marker accounts:
 
-- bob / bobpass — regular user
-- admin / adminpass — admin
+- Students: `student01` through `student50`; passwords follow `student01pass` through `student50pass` (example: `student25 / student25pass`).
+- Companies: `company01` through `company20`; passwords follow `company01pass` through `company20pass` (example: `company16 / company16pass`).
 
 ## YouTube URL
 

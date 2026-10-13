@@ -4,9 +4,9 @@
 {% block content %}
 <div class="auth-shell">
   <div class="auth-panel">
-    <a class="auth-back" href="{{ url_for('index_view') }}">← Home</a>
-    <div class="brand-wordmark">Internship Platform</div>
-    <p class="auth-tagline">Student and company access</p>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('index_view') }}">← Home</a>
+    <div class="brand-wordmark">HireMe</div>
+    <p class="auth-tagline">Sign in or create an account</p>
 
     <form method="POST" action="{{ url_for('login_action_ajax') }}">
       <div class="mb-3">

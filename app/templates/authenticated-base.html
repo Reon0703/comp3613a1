@@ -22,10 +22,9 @@
         min-height: 100vh;
         overflow-y: auto;
         transition: all 0.3s;
-        background: var(--brand-sidebar); 
-        background-image: linear-gradient(180deg, var(--brand-sidebar-start), var(--brand-sidebar-end));
+        background: linear-gradient(90deg, #12333F, #4a707b);
         color: var(--brand-sidebar-text);
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        border-right: 1px solid rgba(194, 200, 197, 0.5);
     }
 
     #sidebar.collapsed {
@@ -50,7 +49,7 @@
     }
     
     #sidebar .nav-link.text-danger {
-        color: #f0a3a6 !important;
+        color: #ffe6e7 !important;
     }
     
     #sidebar .nav-link.text-danger:hover {
@@ -75,6 +74,57 @@
 
     .navbar {
         border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    /* Transparent top bar: toggle left, title centered, welcome badge right */
+    .app-navbar {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        background: transparent;
+    }
+
+    .app-navbar .navbar-title {
+        margin: 0;
+        font-size: clamp(2.25rem, 6vw, 3.75rem);
+        line-height: 1.2;
+        text-align: center;
+        background: var(--brand-accent-gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+    }
+
+    #menu-toggle {
+        justify-self: start;
+        background: var(--brand-accent-gradient);
+        color: #fff;
+        border: 0;
+    }
+
+    #menu-toggle:hover,
+    #menu-toggle:focus-visible {
+        background: var(--brand-accent-gradient);
+        color: #fff;
+        filter: brightness(1.15);
+    }
+
+    #menu-toggle .material-symbols-outlined {
+        color: #fff;
+    }
+
+    .welcome-badge {
+        justify-self: end;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0.5rem 0.9rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background: var(--brand-accent-gradient);
+        color: #fff;
     }
 </style>
 {% block additional_styles %}{% endblock %}
@@ -142,13 +192,12 @@
     </nav>
 
     <div id="content">
-        <nav class="navbar navbar-expand-lg bg-white mb-4 px-3 rounded-3 shadow-sm">
-            <button class="btn btn-outline-secondary" id="menu-toggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
+        <nav class="navbar navbar-expand-lg app-navbar mb-4 px-3 rounded-3">
+            <button class="btn" id="menu-toggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
                 <span class="material-symbols-outlined md-dark">menu</span>
             </button>
-            <div class="ms-auto d-flex align-items-center gap-3">
-                <span class="fw-semibold">Welcome, {{ user.username }}</span>
-            </div>
+            <h1 class="navbar-title brand-wordmark">HireMe</h1>
+            <span class="badge rounded-pill welcome-badge">Welcome, {{ user.username }}</span>
         </nav>
 
         <div class="row">

@@ -52,8 +52,8 @@ def cmd_seed(args: argparse.Namespace) -> None:
 
     bob / bobpass       (regular_user)
     admin / adminpass   (admin)
-    company01 / company01pass through company10 / company10pass (company)
-    student01 / student01pass through student10 / student10pass (student)
+    company01 / company01pass through company20 / company20pass (company)
+    student01 / student01pass through student50 / student50pass (student)
     """
     from app.database import ensure_db_and_tables, get_cli_session
     from app.repositories.application import ApplicationRepository
@@ -182,6 +182,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
     applications_skipped = 0
     applications_removed = 0
     documents_created = 0
+    review_status_result = None
     with get_cli_session() as session:
         repo = UserRepository(session)
         vacancy_repo = VacancyRepository(session)
@@ -333,7 +334,15 @@ def cmd_seed(args: argparse.Namespace) -> None:
             )
             student_users.append(user)
 
-        published_vacancies = vacancy_repo.list_published()
+        from sqlmodel import select
+
+        # Closed vacancies must stay in the target set; otherwise a re-seed would
+        # treat their demo applications as stale and remove them.
+        published_vacancies = session.exec(
+            select(InternshipVacancy)
+            .where(InternshipVacancy.status.in_(["Published", "Closed"]))
+            .order_by(InternshipVacancy.id.desc())
+        ).all()
         demo_document_path = (
             "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/"
             "resources/pdf/dummy.pdf"
@@ -380,6 +389,8 @@ def cmd_seed(args: argparse.Namespace) -> None:
                 applications_created += 1
                 documents_created += 1
 
+        review_status_result = _ensure_seeded_review_statuses(session)
+
     print(f"Seed done — created {created}, skipped {skipped}.")
     print(
         f"Vacancies — created {vacancies_created}, "
@@ -393,8 +404,100 @@ def cmd_seed(args: argparse.Namespace) -> None:
         f"skipped {applications_skipped}, old demo records replaced {applications_removed}; "
         f"documents created {documents_created}."
     )
+    if review_status_result:
+        closed_count, rejected_count, shortlisted_count, under_review_count = (
+            review_status_result
+        )
+        print(
+            "Review statuses — "
+            f"closed vacancies {closed_count}, Rejected {rejected_count}, "
+            f"Shortlisted {shortlisted_count}, Under Review {under_review_count}."
+        )
     print("Login with bob/bobpass or admin/adminpass")
-    print("Company logins use company01/company01pass through company10/company10pass")
+    print("Company logins use company01/company01pass through company20/company20pass")
+    print("Student logins use student01/student01pass through student50/student50pass")
+
+
+def _ensure_seeded_review_statuses(session):
+    """Create the requested review distribution only on an unmigrated dataset."""
+    from sqlmodel import select
+
+    from app.models.application import Application
+    from app.models.vacancy import InternshipVacancy
+
+    vacancies = session.exec(
+        select(InternshipVacancy).order_by(InternshipVacancy.id)
+    ).all()
+    if not vacancies or any(vacancy.status == "Closed" for vacancy in vacancies):
+        return None
+
+    applications_by_vacancy = {
+        vacancy.id: session.exec(
+            select(Application).where(Application.vacancy_id == vacancy.id)
+        ).all()
+        for vacancy in vacancies
+    }
+    if any(len(applications_by_vacancy[vacancy.id]) < 7 for vacancy in vacancies):
+        return None
+
+    rng = random.SystemRandom()
+    closed_vacancies = rng.sample(vacancies, k=len(vacancies) // 2)
+    rejected_count = 0
+    shortlisted_count = 0
+    under_review_count = 0
+    for vacancy in closed_vacancies:
+        applications = applications_by_vacancy[vacancy.id]
+        rejected_ids = {
+            application.id for application in rng.sample(applications, k=4)
+        }
+        shortlist_candidates = [
+            application
+            for application in applications
+            if application.id not in rejected_ids
+        ]
+        shortlisted_ids = {
+            application.id for application in rng.sample(shortlist_candidates, k=3)
+        }
+        vacancy.status = "Closed"
+        vacancy.is_published = False
+        for application in applications:
+            if application.id in rejected_ids:
+                application.status = Application.STATUS_REJECTED
+                rejected_count += 1
+            elif application.id in shortlisted_ids:
+                application.status = Application.STATUS_SHORTLISTED
+                shortlisted_count += 1
+            else:
+                application.status = Application.STATUS_UNDER_REVIEW
+                under_review_count += 1
+    session.commit()
+    return (
+        len(closed_vacancies),
+        rejected_count,
+        shortlisted_count,
+        under_review_count,
+    )
+
+
+def cmd_randomize_review_statuses(args: argparse.Namespace) -> None:
+    """Close half of the vacancies and randomly seed review outcomes once."""
+    from app.database import get_cli_session
+
+    _ensure_models_loaded()
+    with get_cli_session() as session:
+        result = _ensure_seeded_review_statuses(session)
+    if result is None:
+        raise SystemExit(
+            "Migration skipped: the database is already migrated, has no vacancies, "
+            "or does not have at least 7 applications per vacancy."
+        )
+    closed_count, rejected_count, shortlisted_count, under_review_count = result
+    print(f"Closed vacancies: {closed_count}.")
+    print(
+        "Application outcomes — "
+        f"Rejected {rejected_count}, Shortlisted {shortlisted_count}, "
+        f"Under Review {under_review_count}."
+    )
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -549,6 +652,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Insert demo users, companies, and vacancies (idempotent)",
     )
     p_seed.set_defaults(func=cmd_seed)
+
+    p_review_statuses = sub.add_parser(
+        "randomize-review-statuses",
+        help="Randomly close half the vacancies and seed application review outcomes (one time)",
+    )
+    p_review_statuses.set_defaults(func=cmd_randomize_review_statuses)
 
     p_run = sub.add_parser("run", help="Start the web app (uvicorn)")
     p_run.add_argument("--host", default=None, help="Bind host")

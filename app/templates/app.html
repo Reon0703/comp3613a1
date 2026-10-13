@@ -14,7 +14,6 @@
       <div class="col-md-6">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body">
-            <div class="small text-uppercase text-muted fw-semibold mb-2">Workflow 1</div>
             <h2 class="h4 mb-2">Create and publish vacancies</h2>
             <p class="text-muted mb-3">Post internship roles, choose whether they are live immediately, and keep a record of the opportunities you publish.</p>
             <button type="button" class="btn btn-primary create-vacancy-button" data-bs-toggle="modal" data-bs-target="#createVacancyModal">
@@ -28,10 +27,9 @@
       <div class="col-md-6">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body">
-            <div class="small text-uppercase text-muted fw-semibold mb-2">Next step</div>
-            <h2 class="h4 mb-2">Track listings</h2>
-            <p class="text-muted mb-3">Keep your internship board organized with a clear view of published and draft roles.</p>
-            <a class="btn btn-outline-primary" href="{{ url_for('company_vacancies_view') }}">Open vacancy manager</a>
+            <h2 class="h4 mb-2">Vacancy listings</h2>
+            <p class="text-muted mb-3">Keep your internship board organized with a clear view of published and draft listings.</p>
+            <a class="btn btn-primary" href="{{ url_for('company_vacancies_view') }}">Open vacancy manager</a>
           </div>
         </div>
       </div>
@@ -43,7 +41,6 @@
       <div class="col-md-6">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body">
-            <div class="small text-uppercase text-muted fw-semibold mb-2">Workflow 1</div>
             <h2 class="h4 mb-2">Browse internships</h2>
             <p class="text-muted mb-3">Find and apply for internships that match your interests and qualifications.</p>
             <a class="btn btn-primary" href="{{ url_for('browse_internships') }}">Browse internships</a>
@@ -54,10 +51,9 @@
       <div class="col-md-6">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body">
-            <div class="small text-uppercase text-muted fw-semibold mb-2">Your activity</div>
             <h2 class="h4 mb-2">View Applications</h2>
             <p class="text-muted mb-3">Review the internships you applied to and check each application’s current status.</p>
-            <a class="btn btn-outline-primary" href="{{ url_for('student_applications_view') }}">View Applications</a>
+            <a class="btn btn-primary" href="{{ url_for('student_applications_view') }}">View Applications</a>
           </div>
         </div>
       </div>
