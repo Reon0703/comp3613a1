@@ -13,7 +13,7 @@ skinparam arrowColor #1B365D
 
 actor "Company" as Company
 
-rectangle "Internship Platform" as SystemBoundary {
+rectangle "Internship Platform" {
   usecase "Create and Publish Internship Vacancy" as Create_and_Publish_Internship_Vacancy
   usecase "Browse Internship Vacancies" as Browse_Internship_Vacancies
   usecase "Screen & Review Applications" as Screen_Review_Applications
@@ -24,14 +24,11 @@ rectangle "Internship Platform" as SystemBoundary {
 
 actor "Student" as Student
 
-Company -[hidden]right- Create_and_Publish_Internship_Vacancy
-Browse_Internship_Vacancies -[hidden]right- Student
-
 Company -right-> Create_and_Publish_Internship_Vacancy
 Student -left-> Browse_Internship_Vacancies
+Browse_Internship_Vacancies ..> Submit_Internship_Application : <<extend>>
 Company -right-> Screen_Review_Applications
+Screen_Review_Applications ..> Shortlist_Reject_Applications : <<extend>>
 Submit_Internship_Application ..> Attach_Documents : <<include>>
-Submit_Internship_Application ..> Browse_Internship_Vacancies : <<extend>>
-Shortlist_Reject_Applications ..> Screen_Review_Applications : <<extend>>
 
 @enduml

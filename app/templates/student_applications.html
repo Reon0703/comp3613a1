@@ -160,7 +160,7 @@
         </div>
         
         <div class="application-card-actions d-grid gap-2">
-          {% if vacancy and vacancy.status == 'Published' %}
+          {% if vacancy and vacancy.status != 'Draft' %}
           <a class="btn btn-outline-primary" href="{{ url_for('internship_detail_view', vacancy_id=vacancy.id) }}">View details</a>
           {% endif %}
           {% if application.status == 'Submitted' %}
