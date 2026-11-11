@@ -1,10 +1,10 @@
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from uuid import uuid4
 
 from app.models.application import Application
+from app.models.user import User
 from app.models.vacancy import FIELD_OF_STUDY_OPTIONS, InternshipVacancy
-
 
 UPLOAD_DIRECTORY = Path("app/static/uploads")
 ALLOWED_IMAGE_TYPES = {
@@ -20,6 +20,14 @@ VACANCY_STATUSES = {"Published", "Closed", "Draft"}
 class VacancyUpdateResult:
     vacancy: InternshipVacancy
     draft_status_blocked: bool
+
+
+class VacancyAccessError(ValueError):
+    """The authenticated user cannot manage company vacancies."""
+
+
+class VacancyNotFoundError(ValueError):
+    """The vacancy is unavailable to the requested company."""
 
 
 class VacancyService:
@@ -60,7 +68,9 @@ class VacancyService:
         if cleaned_field_of_study not in FIELD_OF_STUDY_OPTIONS:
             raise ValueError("Choose a valid field of study.")
         if cleaned_status not in VACANCY_STATUSES:
-            raise ValueError("Choose Published, Closed, or Draft as the vacancy status.")
+            raise ValueError(
+                "Choose Published, Closed, or Draft as the vacancy status."
+            )
 
         vacancy = InternshipVacancy(
             company_id=company_id,
@@ -77,6 +87,77 @@ class VacancyService:
     def list_company_vacancies(self, company_id: int):
         return self.vacancy_repo.list_by_company(company_id)
 
+    def list_company_vacancies_with_counts(
+        self,
+        user: User,
+    ) -> list[tuple[InternshipVacancy, int]]:
+        if not user.is_company:
+            raise VacancyAccessError("Only company accounts can view vacancies.")
+        return self.vacancy_repo.list_company_vacancies_with_counts(user.id)
+
+    def create_company_vacancy(
+        self,
+        user: User,
+        title: str,
+        description: str,
+        location: str,
+        field_of_study: str,
+        status: str,
+        image_content: bytes | None = None,
+        image_content_type: str | None = None,
+    ) -> InternshipVacancy:
+        if not user.is_company:
+            raise VacancyAccessError("Only company accounts can create vacancies.")
+        image_url = (
+            self.save_image(image_content, image_content_type)
+            if image_content is not None
+            else None
+        )
+        return self.create_vacancy(
+            company_id=user.id,
+            title=title,
+            description=description,
+            location=location,
+            field_of_study=field_of_study,
+            image_url=image_url,
+            status=status,
+        )
+
+    def update_company_vacancy(
+        self,
+        user: User,
+        vacancy_id: int,
+        title: str | None = None,
+        description: str | None = None,
+        location: str | None = None,
+        status: str | None = None,
+        field_of_study: str | None = None,
+        image_content: bytes | None = None,
+        image_content_type: str | None = None,
+    ) -> VacancyUpdateResult:
+        if not user.is_company:
+            raise VacancyAccessError("Only company accounts can update vacancies.")
+
+        vacancy = self.vacancy_repo.get_by_id(vacancy_id)
+        if not vacancy or vacancy.company_id != user.id:
+            raise VacancyNotFoundError("Vacancy not found.")
+
+        image_url = (
+            self.save_image(image_content, image_content_type)
+            if image_content is not None
+            else None
+        )
+        return self.update_vacancy(
+            vacancy_id=vacancy_id,
+            company_id=user.id,
+            title=vacancy.title if title is None else title,
+            description=vacancy.description if description is None else description,
+            location=vacancy.location if location is None else location,
+            status=vacancy.status if status is None else status,
+            field_of_study=field_of_study,
+            image_url=image_url,
+        )
+
     def update_vacancy(
         self,
         vacancy_id: int,
@@ -90,7 +171,7 @@ class VacancyService:
     ) -> VacancyUpdateResult:
         vacancy = self.vacancy_repo.get_by_id(vacancy_id)
         if not vacancy or vacancy.company_id != company_id:
-            raise ValueError("Vacancy not found.")
+            raise VacancyNotFoundError("Vacancy not found.")
 
         was_closed = vacancy.status == "Closed"
         cleaned_title = (title or "").strip()
@@ -101,10 +182,15 @@ class VacancyService:
             raise ValueError("Vacancy title is required.")
         if not cleaned_description:
             raise ValueError("Vacancy description is required.")
-        if cleaned_field_of_study and cleaned_field_of_study not in FIELD_OF_STUDY_OPTIONS:
+        if (
+            cleaned_field_of_study
+            and cleaned_field_of_study not in FIELD_OF_STUDY_OPTIONS
+        ):
             raise ValueError("Choose a valid field of study.")
         if cleaned_status not in VACANCY_STATUSES:
-            raise ValueError("Choose Published, Closed, or Draft as the vacancy status.")
+            raise ValueError(
+                "Choose Published, Closed, or Draft as the vacancy status."
+            )
 
         draft_status_blocked = (
             vacancy.status == "Published"

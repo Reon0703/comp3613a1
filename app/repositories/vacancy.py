@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from sqlmodel import Session, func, select, update
 
@@ -24,7 +23,7 @@ class VacancyRepository:
             self.db.rollback()
             raise
 
-    def list_by_company(self, company_id: int) -> List[InternshipVacancy]:
+    def list_by_company(self, company_id: int) -> list[InternshipVacancy]:
         statement = (
             select(InternshipVacancy)
             .where(InternshipVacancy.company_id == company_id)
@@ -46,6 +45,19 @@ class VacancyRepository:
             vacancy_id: applicant_count
             for vacancy_id, applicant_count in self.db.exec(statement).all()
         }
+
+    def list_company_vacancies_with_counts(
+        self,
+        company_id: int,
+    ) -> list[tuple[InternshipVacancy, int]]:
+        statement = (
+            select(InternshipVacancy, func.count(Application.id))
+            .outerjoin(Application, Application.vacancy_id == InternshipVacancy.id)
+            .where(InternshipVacancy.company_id == company_id)
+            .group_by(InternshipVacancy.id)
+            .order_by(InternshipVacancy.id.desc())
+        )
+        return [(vacancy, count) for vacancy, count in self.db.exec(statement).all()]
 
     def get_by_company_and_title(
         self,
@@ -90,7 +102,7 @@ class VacancyRepository:
             self.db.rollback()
             raise
 
-    def list_published(self) -> List[InternshipVacancy]:
+    def list_published(self) -> list[InternshipVacancy]:
         statement = (
             select(InternshipVacancy)
             .where(InternshipVacancy.status == "Published")

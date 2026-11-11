@@ -19,6 +19,10 @@ class StudentProfileUpdate(SQLModel):
     last_name: str
     email: EmailStr
     education_level: str = ""
+
+
+class ProfileUpdateResponse(SQLModel):
+    message: str
  
 class AdminCreate(UserBase):
     role:str = "admin"

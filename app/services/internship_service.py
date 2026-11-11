@@ -6,12 +6,31 @@ from uuid import uuid4
 from app.models.application import Application
 from app.models.user import User
 from app.models.vacancy import FIELD_OF_STUDY_OPTIONS
-from app.repositories.application import ApplicationRepository
+from app.repositories.application import (
+    ApplicationAlreadyExistsError,
+    ApplicationRepository,
+)
 from app.repositories.internship import InternshipRepository
 from app.utilities.pagination import Pagination
 
 APPLICATION_UPLOAD_DIRECTORY = Path("app/uploads/applications")
 MAX_APPLICATION_DOCUMENT_SIZE = 10 * 1024 * 1024
+
+
+class InternshipAccessError(ValueError):
+    pass
+
+
+class InternshipUnavailableError(ValueError):
+    pass
+
+
+class InternshipApplicationNotFoundError(ValueError):
+    pass
+
+
+class InternshipApplicationNotEditableError(ValueError):
+    pass
 
 
 @dataclass
@@ -42,22 +61,21 @@ class InternshipService:
         if not user.is_student:
             raise ValueError("Only student accounts can browse internships.")
 
+        cleaned_query = (query or "").strip() or None
         selected_field_set = set(field_of_study or [])
         selected_fields = tuple(
-            option
-            for option in FIELD_OF_STUDY_OPTIONS
-            if option in selected_field_set
+            option for option in FIELD_OF_STUDY_OPTIONS if option in selected_field_set
         )
         vacancies, pagination = self.internship_repo.browse_published(
             student_id=user.id,
-            query=query,
+            query=cleaned_query,
             field_of_study=list(selected_fields),
-            page=page,
+            page=max(page, 1),
         )
         return InternshipBrowseResult(
             vacancies=vacancies,
             pagination=pagination,
-            query=query,
+            query=cleaned_query,
             selected_fields_of_study=selected_fields,
         )
 
@@ -69,18 +87,24 @@ class InternshipService:
         content: bytes,
     ):
         if not user.is_student:
-            raise ValueError("Only student accounts can apply to internships.")
+            raise InternshipAccessError(
+                "Only student accounts can apply to internships."
+            )
 
         vacancy = self.internship_repo.get_published_by_id(vacancy_id)
         if vacancy is None:
-            raise ValueError("This internship is no longer accepting applications.")
+            raise InternshipUnavailableError(
+                "This internship is no longer accepting applications."
+            )
 
         existing_application = self.application_repo.get_by_student_and_vacancy(
             user.id,
             vacancy_id,
         )
         if existing_application:
-            raise ValueError("You have already applied to this internship.")
+            raise ApplicationAlreadyExistsError(
+                "You have already applied to this internship."
+            )
 
         safe_name, stored_path = self._store_application_document(filename, content)
         try:
@@ -104,13 +128,17 @@ class InternshipService:
         content: bytes,
     ):
         if not user.is_student:
-            raise ValueError("Only student accounts can edit their applications.")
+            raise InternshipAccessError(
+                "Only student accounts can edit their applications."
+            )
 
         application = self.application_repo.get_for_student(application_id, user.id)
         if application is None:
-            raise ValueError("Application not found.")
+            raise InternshipApplicationNotFoundError("Application not found.")
         if application.status != Application.STATUS_SUBMITTED:
-            raise ValueError("Only applications with Submitted status can be edited.")
+            raise InternshipApplicationNotEditableError(
+                "Only applications with Submitted status can be edited."
+            )
 
         safe_name, stored_path = self._store_application_document(filename, content)
         try:
@@ -124,7 +152,7 @@ class InternshipService:
                 required_status=Application.STATUS_SUBMITTED,
             )
             if result is None:
-                raise ValueError("Application not found.")
+                raise InternshipApplicationNotFoundError("Application not found.")
             application, old_file_paths = result
             self._remove_application_files(old_file_paths)
             return application
@@ -134,13 +162,15 @@ class InternshipService:
 
     def delete_application(self, user: User, application_id: int) -> None:
         if not user.is_student:
-            raise ValueError("Only student accounts can delete their applications.")
+            raise InternshipAccessError(
+                "Only student accounts can delete their applications."
+            )
         removed_file_paths = self.application_repo.delete_student_application(
             application_id=application_id,
             student_id=user.id,
         )
         if removed_file_paths is None:
-            raise ValueError("Application not found.")
+            raise InternshipApplicationNotFoundError("Application not found.")
         self._remove_application_files(removed_file_paths)
 
     @staticmethod
@@ -211,6 +241,8 @@ class InternshipService:
             Path("app/uploads").resolve(),
             Path("app/static/uploads").resolve(),
         )
-        if any(candidate.is_relative_to(directory) for directory in allowed_directories):
+        if any(
+            candidate.is_relative_to(directory) for directory in allowed_directories
+        ):
             return candidate if candidate.is_file() else None
         return None

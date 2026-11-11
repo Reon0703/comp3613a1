@@ -18,6 +18,14 @@
         <input class="form-control" type="email" id="email" name="email" required>
       </div>
       <div class="mb-3">
+        <label class="form-label" for="role">Account type</label>
+        <select class="form-select" id="role" name="role" required>
+          <option value="" selected disabled>Choose an account type</option>
+          <option value="regular_user">Student</option>
+          <option value="company">Company</option>
+        </select>
+      </div>
+      <div class="mb-3">
         <label class="form-label" for="password">Password</label>
         <input class="form-control" type="password" id="password" name="password" required>
       </div>

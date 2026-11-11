@@ -9,6 +9,10 @@ from app.models.vacancy import InternshipVacancy, VacancyDocument
 from app.utilities.pagination import Pagination
 
 
+class ApplicationAlreadyExistsError(ValueError):
+    pass
+
+
 class ApplicationRepository:
     def __init__(self, db: Session):
         self.db = db
@@ -285,7 +289,9 @@ class ApplicationRepository:
             return application
         except IntegrityError as exc:
             self.db.rollback()
-            raise ValueError("You have already applied to this internship.") from exc
+            raise ApplicationAlreadyExistsError(
+                "You have already applied to this internship."
+            ) from exc
         except Exception:
             self.db.rollback()
             raise
@@ -402,7 +408,9 @@ class ApplicationRepository:
         self.db.refresh(application)
         return application
 
-    def attach_document(self, application_id: int, document_id: int) -> ApplicationDocument:
+    def attach_document(
+        self, application_id: int, document_id: int
+    ) -> ApplicationDocument:
         link = ApplicationDocument(
             application_id=application_id,
             document_id=document_id,

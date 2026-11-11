@@ -5,7 +5,6 @@ from app.utilities.flash import get_flashed_messages
 from jinja2 import Environment, FileSystemLoader
 from app.config import get_settings
 
-
 template_env = Environment(loader = FileSystemLoader("app/templates",), )
 template_env.globals['get_flashed_messages'] = get_flashed_messages
 templates = Jinja2Templates(env=template_env)
@@ -14,4 +13,6 @@ static_files = StaticFiles(directory="app/static")
 router = APIRouter(tags=["Jinja Based Endpoints"], include_in_schema=get_settings().env.lower() in ["dev","development"])
 api_router = APIRouter(tags=["API Endpoints"], prefix="/api")
 
-from . import (index, login, register, admin_home, user_home, users, logout, server_config, company_vacancies, company_profile, student_profile, internships, company_applications, student_applications)
+from . import (index, login, register, admin_home, user_home, users, logout, server_config, company_vacancies, company_profile, student_profile, internships, company_applications, student_applications, api_auth, api_profiles, api_company_vacancies, api_internships)
+from . import api_student_applications as api_student_applications
+from . import api_company_applications as api_company_applications
